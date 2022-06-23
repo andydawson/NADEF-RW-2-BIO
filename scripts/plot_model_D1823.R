@@ -1,8 +1,14 @@
 library(ggplot2)
 library(grid)
+library(ggdogs)
 
-dat = readRDS('data/D1823/D1823_input.RDS')
-post = readRDS('output/D1823_output.RDS')
+if (update){
+  dat = readRDS('data/D1823/D1823_input_update.RDS')
+  post = readRDS('output/D1823_output_update.RDS')
+} else {
+  dat = readRDS('data/D1823/D1823_input.RDS')
+  post = readRDS('output/D1823_output.RDS') 
+}
 
 names(post)
 dim(post$x)
@@ -23,9 +29,15 @@ y[y==(-999)] = NA
 #######################################################################################################################################
 
 # plot data and model DBH for each tree
-pdf('figures/dbh_vs_year_estimated.pdf', width=10, height=6)
+if (update) {
+  pdf('figures/dbh_vs_year_estimated_update.pdf', width=10, height=6)
+} else {
+  pdf('figures/dbh_vs_year_estimated.pdf', width=10, height=6)
+}
 for (i in 1:N_trees){
-
+  
+  stem_id = core2stemids[i]
+  species_id = species_ids[core2species[i]]
 
   d_iter = d_latent[, i, ]
 
@@ -40,7 +52,7 @@ for (i in 1:N_trees){
                        year = years[d2year[idx_d_obs]])
 
   # Create a text
-  grob <- grobTree(textGrob(paste0('Tree ', i), x=0.1,  y=0.9, hjust=0,
+  grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.1,  y=0.9, hjust=0,
                             gp=gpar(col="black", fontsize=22)))
 
   p <- ggplot() +
@@ -48,6 +60,7 @@ for (i in 1:N_trees){
     geom_ribbon(data=dbh_tree, aes(x=year, ymin=d_lo, ymax=d_hi), fill='lightgrey') +
     geom_line(data=dbh_tree, aes(x=year, y=d_median)) +
     geom_point(data=dbh_obs, aes(x=year, y=d_obs), size=2) +
+    # geom_dog(data=dbh_obs, aes(x=year, y=d_obs, dog='glasses'), size=2) +
     # ylim(c(0,500)) +
     xlab('year') +
     ylab('dbh (cm)') +
@@ -64,7 +77,11 @@ dev.off()
 #######################################################################################################################################
 
 # plot data and model DBH for each tree
-pdf('figures/rw_vs_year_estimated.pdf', width=10, height=6)
+if (update) {
+  pdf('figures/rw_vs_year_estimated_update.pdf', width=10, height=6)
+} else {
+  pdf('figures/rw_vs_year_estimated.pdf', width=10, height=6)
+}
 for (i in 1:N_trees){
 
   x_iter = x[, i, ]
@@ -86,6 +103,7 @@ for (i in 1:N_trees){
     geom_ribbon(data=rw_tree, aes(x=year, ymin=x_lo, ymax=x_hi), fill='lightgrey') +
     geom_line(data=rw_tree, aes(x=year, y=x_median)) +
     geom_point(data=rw_obs, aes(x=year, y=x_obs), size=2) +
+    # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
     # ylim(c(0,500)) +
     xlab('year') +
     ylab('rw (mm)') +
@@ -116,6 +134,11 @@ ggplot(data=beta_t_quant) +
   xlab('year') +
   ylab('beta_t') +
   theme_bw(16)
+if (update) {
+  ggsave('figures/time_effect_estimated_update.pdf')
+} else {
+  ggsave('figures/time_effect_estimated.pdf')
+}
 
 #######################################################################################################################################
 # plot tree effects
@@ -134,4 +157,9 @@ ggplot(data=beta_quant) +
   xlab('tree') +
   ylab('beta') +
   theme_bw(16)
+if (update) {
+  ggsave('figures/time_effect_estimated_update.pdf')
+} else {
+  ggsave('figures/time_effect_estimated.pdf')
+}
 
