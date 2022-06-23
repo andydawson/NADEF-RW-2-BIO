@@ -4,6 +4,10 @@ meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 
+meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] = meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] /10
+
+meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')),]
+
 # subset the data to smaller region
 ggplot(data=meta) + 
   geom_point(aes(x=x,y=y)) 
@@ -61,6 +65,8 @@ rw_sub = rw_sub[order(rw_sub$stat_id),]
 y = data.frame(matrix(NA, nrow=N_trees, ncol=ncol(rw_sub)))
 y[match(rw_sub$stem_id, stem_ids),] = rw_sub
 
+# meta_sub$species_code[match(rw_sub$stat_id, meta_sub$stat_id)]
+
 # rw_sub = rw_sub[match(rw_sub$stem_id, stem_ids),]
 y = y[,which(substr(colnames(rw_sub), 2, 5) %in% years)]
 if (year_hi>2013) {
@@ -72,7 +78,7 @@ logy = log(y)
 # logy = logy[idx_order,]
 # core2tree = stat_ids[match(rw_sub$stem_id, stem_ids)]
 core2tree = stat_ids
-core2species = meta_sub$species_code[match(rw_sub$stat_id, meta_sub$stat_id)]
+core2species = meta_sub$species_code[match(core2tree, meta_sub$stat_id)]
 
 logy[is.na(logy)] = -999
 
@@ -98,6 +104,7 @@ N_dbh
 y
 logy
 core2tree
+core2species
 d
 d2tree
 d2year
@@ -112,10 +119,14 @@ saveRDS(list(N_trees = N_trees,
              rw_year_start = rw_year_start,
              rw_year_end = rw_year_end,
              core2tree = core2tree,
+             core2species = core2species,
              d = d,
              d2tree = d2tree,
              d2year = d2year,
-             sig_d_obs = 0.02
+             d2species = d2species,
+             sig_d_obs = 0.02,
+             species_ids = species_ids,
+             years = years
              ),
         file='data/D1823/D1823_input.RDS')
 
