@@ -80,7 +80,7 @@ y[match(rw_sub$stem_id, stem_ids),] = rw_sub
 
 # rw_sub = rw_sub[match(rw_sub$stem_id, stem_ids),]
 y = y[,which(substr(colnames(rw_sub), 2, 5) %in% years)]
-if (update){
+if (!update){
 if (year_hi>2013) {
   y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
 }

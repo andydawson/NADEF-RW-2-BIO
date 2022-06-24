@@ -54,7 +54,7 @@ for (i in 1:N_trees){
                        year = years[d2year[idx_d_obs]])
 
   # Create a text
-  grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.1,  y=0.9, hjust=0,
+  grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.05,  y=0.9, hjust=0,
                             gp=gpar(col="black", fontsize=22)))
 
   p <- ggplot() +
@@ -85,6 +85,9 @@ if (update) {
   pdf('figures/rw_vs_year_estimated.pdf', width=10, height=6)
 }
 for (i in 1:N_trees){
+  
+  stem_id = core2stemids[i]
+  species_id = species_ids[core2species[i]]
 
   x_iter = x[, i, ]
 
@@ -97,7 +100,7 @@ for (i in 1:N_trees){
                        year = years)
 
   # Create a text
-  grob <- grobTree(textGrob(paste0('Tree ', i), x=0.1,  y=0.9, hjust=0,
+  grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.05,  y=0.9, hjust=0,
                             gp=gpar(col="black", fontsize=22)))
 
   p <- ggplot() +
@@ -160,8 +163,8 @@ ggplot(data=beta_quant) +
   ylab('beta') +
   theme_bw(16)
 if (update) {
-  ggsave('figures/time_effect_estimated_update.pdf')
+  ggsave('figures/individual_effect_estimated_update.pdf')
 } else {
-  ggsave('figures/time_effect_estimated.pdf')
+  ggsave('figures/individual_effect_estimated.pdf')
 }
 

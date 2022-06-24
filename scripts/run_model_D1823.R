@@ -25,8 +25,11 @@ rm(compiled)
 post=rstan::extract(fit)
 rm(fit)
 
-saveRDS(post, file = 'output/D1823_output.RDS')
-# saveRDS(post, file = 'output/D1823_output_update.RDS')
+if (update){
+  saveRDS(post, file = 'output/D1823_output_update.RDS')
+} else {
+  saveRDS(post, file = 'output/D1823_output.RDS')
+}
 
 # #######################################################################################################################################
 # # 

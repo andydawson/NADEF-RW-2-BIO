@@ -59,8 +59,8 @@ ids = read.ids(dat_all, stc = c(3,4,1))
 dat_all = treeMean(dat_all, ids=ids)
 dat_all = t(dat_all)
 
-dat_all = data.frame(year=rownames(dat_all), dat_all)
-colnames(dat_all) = paste0('X', colnames(dat_all))
+# dat_all = data.frame(year=rownames(dat_all), dat_all)
+# colnames(dat_all) = paste0('X', colnames(dat_all))
 
 # stem_id short_id long_id species_id 
 
