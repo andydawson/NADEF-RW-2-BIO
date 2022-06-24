@@ -20,8 +20,8 @@ meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] = meta[which((met
 ggplot(data=meta) + 
   geom_point(aes(x=x,y=y)) 
 
-hi = 60
-lo = 40
+hi = 80
+lo = 20
 meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
@@ -52,7 +52,7 @@ stat_ids = seq(1, N_trees)
 meta_sub$stat_id = match(meta_sub$stem_id, stem_ids)
 meta_sub$species_code = match(meta_sub$species_id, species_ids)
 
-year_lo = 1950
+year_lo = 1900
 year_hi = 2019
 if (update){
   year_hi = 2021
