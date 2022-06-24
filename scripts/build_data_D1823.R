@@ -2,7 +2,7 @@ library(ggplot2)
 
 # for original data: update = 0
 # for updated data: update = 1
-update = 1
+update = TRUE
 
 meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
@@ -80,7 +80,7 @@ y[match(rw_sub$stem_id, stem_ids),] = rw_sub
 
 # rw_sub = rw_sub[match(rw_sub$stem_id, stem_ids),]
 y = y[,which(substr(colnames(rw_sub), 2, 5) %in% years)]
-if (!update){
+if (update){
 if (year_hi>2013) {
   y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
 }

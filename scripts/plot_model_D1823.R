@@ -2,6 +2,8 @@ library(ggplot2)
 library(grid)
 library(ggdogs)
 
+update = TRUE
+
 if (update){
   dat = readRDS('data/D1823/D1823_input_update.RDS')
   post = readRDS('output/D1823_output_update.RDS')
