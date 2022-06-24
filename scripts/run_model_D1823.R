@@ -1,11 +1,17 @@
 library(rstan)
 
+update = 1
+
 #######################################################################################################################################
 # 
 #######################################################################################################################################
 
-# dat = readRDS('data/D1823/D1823_input.RDS')
-dat = readRDS('data/D1823/D1823_input_update.RDS')
+if (update){
+  dat = readRDS('data/D1823/D1823_input_update.RDS')
+} else {
+  dat = readRDS('data/D1823/D1823_input.RDS')
+}
+# 
 compiled <- stan_model(file = 'models/tree_model.stan')
 
 fit <- sampling(compiled, 
@@ -19,8 +25,8 @@ rm(compiled)
 post=rstan::extract(fit)
 rm(fit)
 
-# saveRDS(post, file = 'output/D1823_output.RDS')
-saveRDS(post, file = 'output/D1823_output_update.RDS')
+saveRDS(post, file = 'output/D1823_output.RDS')
+# saveRDS(post, file = 'output/D1823_output_update.RDS')
 
 # #######################################################################################################################################
 # # 
