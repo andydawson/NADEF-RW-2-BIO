@@ -14,7 +14,7 @@ if (update) {
 
 meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] = meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] /10
 
-meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')),]
+# meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')),]
 
 # subset the data to smaller region
 ggplot(data=meta) + 
