@@ -1,12 +1,15 @@
 library(dplR)
 library(ggplot2)
 library(plyr)
+library(reshape2)
 
 ############################################################################################
 # read original dataset
 ############################################################################################
 
 meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
+colnames(meta)[which(colnames(meta)=='status')] = 'status_id'
+
 rw   = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 
 ############################################################################################
@@ -16,7 +19,7 @@ rw   = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 # read dbh file
 dbh = read.csv('data/D1823/D1823_dbh.csv', stringsAsFactors = FALSE)
 dbh_melt = melt(dbh, id.vars=c('stem_id', 'species_code'))
-dbh_meta = meta[match(dbh_melt$stem_id, meta$stem_id), c('plot_id', 'short_id', 'long_id', 'x', 'y', 'status_id')]
+dbh_meta = meta[match(dbh_melt$stem_id, meta$stem_id), c('plot_id', 'x', 'y', 'status_id')]
 
 dbh_meta = data.frame(dbh_meta, dbh_melt)
 dbh_meta$year = 2021
@@ -62,7 +65,7 @@ colnames(dat_all) = paste0('X', colnames(dat_all))
 # stem_id short_id long_id species_id 
 
 rw_meta = meta_new[match(as.numeric(rownames(dat_all)), meta_new$stem_id), 
-         c('stem_id', 'short_id', 'long_id', 'species_id')]
+         c('stem_id', 'species_id')]
 rw_new = data.frame(rw_meta, dat_all)
 
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
