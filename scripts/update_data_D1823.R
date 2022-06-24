@@ -38,7 +38,7 @@ write.csv(meta_new, 'data/D1823/D1823_meta_update.csv', row.names=FALSE)
 
 # read rwl files
 fnames = list.files(path="data/ring-width/", pattern=".rwl$")
-fnames = fnames[c(1,2,4)]
+# fnames = fnames[c(1,2,4)]
 
 dat = list()
 for (i in 1:length(fnames)){
