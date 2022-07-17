@@ -1,27 +1,29 @@
 library(ggplot2)
 
-# for original data: update = 0
-# for updated data: update = 1
-update = TRUE
+# for original data: update = FALSE
+# for updated data: update = TRUE
+update = FALSE
 
 meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 
 if (update) {
   meta = read.csv('data/D1823/D1823_meta_update.csv', stringsAsFactors = FALSE)
+  meta$dbh[which(meta$year == 2021)] = meta[which(meta$year == 2021),'dbh']/10
+  
   rw = read.csv('data/D1823/D1823_rw_update.csv', stringsAsFactors = FALSE)
 }
 
 meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] = meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] /10
 
-# meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')),]
+# meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')
 
 # subset the data to smaller region
 ggplot(data=meta) + 
   geom_point(aes(x=x,y=y)) 
 
-hi = 80
-lo = 20
+hi = 70
+lo = 30
 meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
@@ -55,9 +57,11 @@ meta_sub$species_code = match(meta_sub$species_id, species_ids)
 year_lo = 1900
 year_hi = 2019
 if (update){
-  year_hi = 2021
+  year_hi = 2019
 }
 years = seq(year_lo, year_hi)
+
+meta_sub = meta_sub[which(meta_sub$year %in% years),]
 
 N_years = length(years)
 years_idx = seq(1, N_years)
@@ -74,16 +78,21 @@ rw_stat_id = stat_ids[match(rw_sub$stem_id, stem_ids)]
 rw_sub = data.frame(stat_id = rw_stat_id, rw_sub)
 rw_sub = rw_sub[order(rw_sub$stat_id),]
 y = data.frame(matrix(NA, nrow=N_trees, ncol=ncol(rw_sub)))
-y[match(rw_sub$stem_id, stem_ids),] = rw_sub
+# y[match(rw_sub$stem_id, stem_ids),] = rw_sub
+y[rw_sub$stat_id,] = rw_sub
+
 
 # meta_sub$species_code[match(rw_sub$stat_id, meta_sub$stat_id)]
 
 # rw_sub = rw_sub[match(rw_sub$stem_id, stem_ids),]
 y = y[,which(substr(colnames(rw_sub), 2, 5) %in% years)]
 if (!update){
-if (year_hi>2013) {
+  if (year_hi>2013) {
+    y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
+  }
+} 
+if ((update)&(year_hi>2013)){
   y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
-}
 }
 
 logy = log(y)
@@ -94,10 +103,10 @@ core2tree = stat_ids
 core2species = meta_sub$species_code[match(core2tree, meta_sub$stat_id)]
 core2stemids = stem_ids
 
-logy[is.na(logy)] = -999
-
 rw_year_start = apply(logy, 1, which.min)
 rw_year_end   = apply(logy, 1, which.max)
+
+logy[is.na(logy)] = as.integer(-999)
 
 # int<lower=0> N_trees;
 # int<lower=0> N_years;
@@ -148,5 +157,5 @@ saveRDS(list(N_trees = N_trees,
              sig_d_obs = 0.02,
              species_ids = species_ids,
              years = years
-             ),
-        file=fname)
+),
+file=fname)
