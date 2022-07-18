@@ -2,14 +2,16 @@ library(ggplot2)
 
 # for original data: update = FALSE
 # for updated data: update = TRUE
-update = FALSE
+update = TRUE
 
+# meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
+# rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 
 if (update) {
   meta = read.csv('data/D1823/D1823_meta_update.csv', stringsAsFactors = FALSE)
-  meta$dbh[which(meta$year == 2021)] = meta[which(meta$year == 2021),'dbh']/10
+  # meta$dbh[which(meta$year == 2021)] = meta[which(meta$year == 2021),'dbh']/10
   
   rw = read.csv('data/D1823/D1823_rw_update.csv', stringsAsFactors = FALSE)
 }
@@ -57,7 +59,7 @@ meta_sub$species_code = match(meta_sub$species_id, species_ids)
 year_lo = 1900
 year_hi = 2019
 if (update){
-  year_hi = 2019
+  year_hi = 2021
 }
 years = seq(year_lo, year_hi)
 
@@ -77,6 +79,9 @@ N_dbh = length(d)
 rw_stat_id = stat_ids[match(rw_sub$stem_id, stem_ids)]
 rw_sub = data.frame(stat_id = rw_stat_id, rw_sub)
 rw_sub = rw_sub[order(rw_sub$stat_id),]
+
+rw_year_max = max(as.numeric(substr(colnames(rw_sub), 2, 5)[4:ncol(rw_sub)]))
+
 y = data.frame(matrix(NA, nrow=N_trees, ncol=ncol(rw_sub)))
 # y[match(rw_sub$stem_id, stem_ids),] = rw_sub
 y[rw_sub$stat_id,] = rw_sub
@@ -91,9 +96,10 @@ if (!update){
     y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
   }
 } 
-if ((update)&(year_hi>2013)){
+if ((update)&(year_hi>2013)&(rw_year_max<year_hi)){
   y = data.frame(y, matrix(-999, nrow=N_trees, ncol=year_hi-2013))
 }
+# if (update & max())
 
 logy = log(y)
 # idx_order = match(rw_sub$stem_id, stem_ids)
@@ -159,3 +165,4 @@ saveRDS(list(N_trees = N_trees,
              years = years
 ),
 file=fname)
+
