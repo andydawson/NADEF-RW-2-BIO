@@ -62,6 +62,8 @@ dbh$ancient_id = NA
 dbh_meta = dbh[,c('plot_id', 'stem_id', 'ancient_id', 'species_id', 'x', 'y', 'year', 'dbh')]
 meta = meta[,c('plot_id', 'stem_id', 'species_id', 'ancient_id', 'x', 'y', 'year', 'dbh')]
 
+meta[which((meta$stem_id == 'C460')&(meta$year == 2019)), 'dbh'] = meta[which((meta$stem_id == 'C460')&(meta$year == 2019)), 'dbh'] /10
+
 write.csv(meta, 'data/D1823/D1823_meta.csv', row.names=FALSE)
 
 meta_new = rbind(meta, dbh_meta)
@@ -211,7 +213,8 @@ dbh_rw = data.frame(rw_out$stem_id, dbh_rw = rowSums(rw_out[,3:ncol(rw_out)],na.
 # # works
 # rw_expand = rbind(rw_expand, rw_out[c(1:3, 5:9),])
 
-rw_out[which(rw_out == 0)] = 0.001
+
+rw_out[rw_out == 0] = 0.001
 
 rw_expand = rbind(rw_expand, rw_out)
 

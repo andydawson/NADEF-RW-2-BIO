@@ -16,7 +16,6 @@ if (update) {
   rw = read.csv('data/D1823/D1823_rw_update.csv', stringsAsFactors = FALSE)
 }
 
-meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] = meta[which((meta$stem_id == 1109)&(meta$year == 2019)), 'dbh'] /10
 
 # meta = meta[which(meta$status_id %in% c('A', 'AS', 'AL')
 
@@ -51,6 +50,7 @@ rw_stem_ids = unique(rw_sub$stem_id)
 stem_ids = unique(meta_sub$stem_id)
 N_trees = length(stem_ids)
 species_ids = unique(meta_sub$species_id)
+N_species = length(species_ids)
 
 stat_ids = seq(1, N_trees)
 meta_sub$stat_id = match(meta_sub$stem_id, stem_ids)
@@ -101,6 +101,8 @@ if ((update)&(year_hi>2013)&(rw_year_max<year_hi)){
 }
 # if (update & max())
 
+# y[which(y==0)] = NA
+
 logy = log(y)
 # idx_order = match(rw_sub$stem_id, stem_ids)
 # logy = logy[idx_order,]
@@ -146,7 +148,7 @@ if (update) {
 
 saveRDS(list(N_trees = N_trees, 
              N_years = N_years,
-             # N_species
+             N_species = N_species,
              N_cores = N_cores,
              N_dbh = N_dbh,
              y = y,

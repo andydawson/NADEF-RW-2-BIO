@@ -1,6 +1,6 @@
 library(ggplot2)
 library(grid)
-library(ggdogs)
+# library(ggdogs)
 
 update = TRUE
 
@@ -30,6 +30,8 @@ y[y==(-999)] = NA
 #
 #######################################################################################################################################
 
+# which(!is.na(y[,122]))
+
 # plot data and model DBH for each tree
 if (update) {
   pdf('figures/dbh_vs_year_estimated_update.pdf', width=10, height=6)
@@ -46,7 +48,11 @@ for (i in 1:N_trees){
   d_mean = apply(d_iter, 2, mean)
   d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 
-  dbh_tree = data.frame(d_mean = d_mean, d_median = d_quant[,2], d_lo = d_quant[,1], d_hi = d_quant[,3], year = years)
+  dbh_tree = data.frame(d_mean = d_mean, 
+                        d_median = d_quant[,2], 
+                        d_lo = d_quant[,1], 
+                        d_hi = d_quant[,3], 
+                        year = years)
 
   idx_d_obs = which(d2tree == i)
 
@@ -121,16 +127,48 @@ for (i in 1:N_trees){
 }
 dev.off()
 
+# #######################################################################################################################################
+# # plot time effects
+# #######################################################################################################################################
+# 
+# beta_t = post$beta_t
+# 
+# beta_t_quant = data.frame(t(apply(beta_t, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+# colnames(beta_t_quant) = c('lo', 'mid', 'hi')
+# 
+# beta_t_quant$year = years
+# 
+# ggplot(data=beta_t_quant) +
+#   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+#   geom_point(aes(x=year, y=mid)) + 
+#   geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
+#   xlab('year') +
+#   ylab('beta_t') +
+#   theme_bw(16)
+# if (update) {
+#   ggsave('figures/time_effect_estimated_update.pdf')
+# } else {
+#   ggsave('figures/time_effect_estimated.pdf')
+# }
+
 #######################################################################################################################################
 # plot time effects
 #######################################################################################################################################
 
 beta_t = post$beta_t
 
-beta_t_quant = data.frame(t(apply(beta_t, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-colnames(beta_t_quant) = c('lo', 'mid', 'hi')
+foo = apply(beta_t, c(2,3), function(x) quantile(x, c(0.025, 0.5, 0.975)))
+bar = melt(foo)
+beta_t_quant = bar %>% pivot_wider(names_from = Var1, values_from = value)
+colnames(beta_t_quant) = c('year', 'species_id', 'lo', 'mid', 'hi')
 
-beta_t_quant$year = years
+beta_t_quant$year = years[beta_t_quant$year]
+beta_t_quant$species_id = species_ids[beta_t_quant$species_id]
+
+# beta_t_quant = data.frame(t(apply(beta_t, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+# colnames(beta_t_quant) = c('lo', 'mid', 'hi')
+
+# beta_t_quant$year = years
 
 ggplot(data=beta_t_quant) +
   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
@@ -138,13 +176,41 @@ ggplot(data=beta_t_quant) +
   geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
   xlab('year') +
   ylab('beta_t') +
-  theme_bw(16)
+  theme_bw(16) +
+  facet_grid(species_id~.)
 if (update) {
-  ggsave('figures/time_effect_estimated_update.pdf')
+  ggsave('figures/time_species_effect_estimated_update.pdf')
 } else {
-  ggsave('figures/time_effect_estimated.pdf')
+  ggsave('figures/time_species_effect_estimated.pdf')
 }
 
+# #######################################################################################################################################
+# # plot time effects
+# #######################################################################################################################################
+# 
+# if (!is.null(post$beta_k)){
+# 
+# beta_k = post$beta_k
+# 
+# beta_k_quant = data.frame(t(apply(beta_k, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+# colnames(beta_k_quant) = c('lo', 'mid', 'hi')
+# 
+# beta_k_quant$species_id = species_ids
+# 
+# ggplot(data=beta_k_quant) +
+#   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+#   geom_point(aes(x=species_id, y=mid)) + 
+#   geom_linerange(aes(x=species_id, ymin=lo, ymax=hi)) +
+#   xlab('species') +
+#   ylab('beta_k') +
+#   theme_bw(16)
+# if (update) {
+#   ggsave('figures/species_effect_estimated_update.pdf')
+# } else {
+#   ggsave('figures/species_effect_estimated.pdf')
+# }
+# 
+# }
 #######################################################################################################################################
 # plot tree effects
 #######################################################################################################################################
