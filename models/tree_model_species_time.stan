@@ -30,8 +30,8 @@ parameters {
   matrix[N_years, N_species] beta_t;
   real<lower=1e-6> beta_t_sd;
 
-  real beta_k[N_species];
-  real<lower=1e-6> beta_k_sd;
+  //real beta_k[N_species];
+  //real<lower=1e-6> beta_k_sd;
 
   real<lower=1e-6> sig_x;
   real<lower=1e-6> sig_x_obs;
@@ -56,30 +56,46 @@ transformed parameters {
 }
 model {
 
-  beta0     ~ normal(0, 1.0/0.00001);
+  // tree effect mean and dispersion priors
+  beta0     ~ normal(0, 1000);
+  beta_sd   ~ uniform(1e-6, 1000);
+
+  // ring-width data model dispersion prior
   sig_x_obs ~ uniform(1e-6, 2.0);
   //sig_d_obs ~ uniform(1e-6, 10);
 
-  sig_x  ~ uniform(1e-6, 1000);
-  beta_sd   ~ uniform(1e-6, 1000);
+  // latent ring-width process dispersion prior
+  sig_x     ~ uniform(1e-6, 1000);
+
+  // temporal species effect dispersion prior
   beta_t_sd ~ uniform(1e-6, 1000);
-  beta_k_sd ~ uniform(1e-6, 1000);
+
+  //// species effect dispersion prior
+  //beta_k_sd ~ uniform(1e-6, 1000);
+
   
   for(tree in 1:N_trees) {
+
+    // latent dbh initial value prior 
     d_init[tree] ~ uniform(0, 10);
+
+    // tree effect prior
     beta[tree] ~ normal(beta0, beta_sd);
   }
-  
+
+  // temporal species effect prior 
   for(year in 1:N_years) {
     beta_t[year,] ~ normal(0, beta_t_sd);
   }
-  
+
+  // latent ring-width process model 
   for (tree in 1:N_trees) {
     for (year in 1:N_years) {
       x[tree, year] ~ lognormal(beta[tree] + beta_t[year, core2species[tree]], sig_x);
     }
   }
 
+  // ring-width data model
   for (tree in 1:N_trees) {
     for (year in 1:N_years) {
       if (logy[tree,year] == -999){
@@ -89,7 +105,7 @@ model {
     }
   }
 
-
+  // dbh data model 
   for (i in 1:N_dbh) {
     log(d[i]) ~ student_t(3.0, log(d_latent[d2tree[i],d2year[i]]), sig_d_obs);
   }
