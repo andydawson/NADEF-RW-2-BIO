@@ -23,8 +23,8 @@ if (update) {
 ggplot(data=meta) + 
   geom_point(aes(x=x,y=y)) 
 
-hi = 70
-lo = 30
+hi = 100
+lo = 0
 meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
 # subset the data to smaller region
 ggplot(data=meta_sub) + 

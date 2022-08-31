@@ -222,11 +222,11 @@ ggplot() +
   ylab('biomass increment (kg)')  +
   facet_wrap(~species_id)
 
-agb_all = bio_melt %>% 
+agb_all = agb_melt %>% 
   group_by(year, iter) %>%
-  summarize(agb = sum(value), .groups="keep")
+  summarize(agb = sum(agb), .groups="keep")
 
-bio_quants_all = agb_all %>% 
+agb_quants_all = agb_all %>% 
   dplyr::group_by(year) %>%
   dplyr::summarize(bio_mean = mean(agb), 
                    bio_median = median(agb), 
@@ -235,8 +235,8 @@ bio_quants_all = agb_all %>%
 
   
 ggplot() +
-  geom_ribbon(data=bio_quants_all, aes(x=year, ymin=bio_lo, ymax=bio_hi), fill='lightgrey') +
-  geom_line(data=bio_quants_all, aes(x=year, y=bio_median)) +
+  geom_ribbon(data=agb_quants_all, aes(x=year, ymin=bio_lo, ymax=bio_hi), fill='lightgrey') +
+  geom_line(data=agb_quants_all, aes(x=year, y=bio_median)) +
   theme_bw(14) +
   xlab('year') +
   ylab('biomass (kg)') 
@@ -244,10 +244,10 @@ ggplot() +
 # calculate biomass increment
 ############################################################################################
 
-agbi_melt =  bio_melt %>% 
+agbi_melt =  agb_melt %>% 
   group_by(stat_id, species_id, iter) %>%
   arrange(year, .by_group=TRUE) %>%
-  mutate(agbi = value - lag(value))
+  mutate(agbi = agb - lag(agb))
 
 agbi_melt = agbi_melt[which(!is.na(agbi_melt$agbi)),]
 agbi_quants = agbi_melt %>% 
@@ -284,17 +284,23 @@ agbi_quants_species = agbi_species %>%
                    agbi_lo = quantile(agbi, c(0.025)),
                    agbi_hi = quantile(agbi, c(0.975)), .groups="keep")
 
+if (update){
+  pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
+} else {
+  pdf('figures/agbi_vs_year_by_species.pdf', width=10, height=6)
+}
 ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
   geom_line(data=agbi_quants_species, aes(x=year, y=agbi_median, group=species_id, colour=species_id)) +
   theme_bw(14) +
   xlab('year') +
   ylab('biomass increment (kg)') 
+dev.off()
 
 if (update){
-pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
+pdf('figures/agbi_vs_year_facet_species_update.pdf', width=10, height=6)
 } else {
-pdf('figures/agbi_vs_year_by_species.pdf', width=10, height=6)
+pdf('figures/agbi_vs_year_facet_species.pdf', width=10, height=6)
 }
   p <- ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +

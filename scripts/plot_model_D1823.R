@@ -1,5 +1,8 @@
 library(ggplot2)
 library(grid)
+library(reshape2)
+library(dplyr)
+library(tidyr)
 # library(ggdogs)
 
 update = TRUE
@@ -211,6 +214,30 @@ if (update) {
 # }
 # 
 # }
+
+#######################################################################################################################################
+# plot tree effect overall mean
+#######################################################################################################################################
+
+beta0 = post$beta0
+
+beta0_quant = quantile(beta0, c(0.025, 0.5, 0.975))
+names(beta0_quant) = c('lo', 'mid', 'hi')
+beta0_quant = data.frame(tree=1, t(beta0_quant))
+
+ggplot(data=beta0_quant) +
+  geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+  geom_point(aes(x=tree, y=mid)) + 
+  geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
+  xlab('tree') +
+  ylab('beta') +
+  theme_bw(16)
+if (update) {
+  ggsave('figures/individual_effect_estimated_update.pdf')
+} else {
+  ggsave('figures/individual_effect_estimated.pdf')
+}
+
 #######################################################################################################################################
 # plot tree effects
 #######################################################################################################################################
@@ -221,13 +248,22 @@ beta_quant = data.frame(t(apply(beta, 2, function(x) quantile(x, c(0.025, 0.5, 0
 colnames(beta_quant) = c('lo', 'mid', 'hi')
 beta_quant$tree = seq(1, nrow(beta_quant))
 
+# ggplot(data=beta_quant) +
+#   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+#   geom_point(aes(x=tree, y=mid)) + 
+#   geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
+#   xlab('tree') +
+#   ylab('beta') +
+#   theme_bw(16)
+
 ggplot(data=beta_quant) +
-  geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+  geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
   geom_point(aes(x=tree, y=mid)) + 
   geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
   xlab('tree') +
   ylab('beta') +
   theme_bw(16)
+
 if (update) {
   ggsave('figures/individual_effect_estimated_update.pdf')
 } else {
