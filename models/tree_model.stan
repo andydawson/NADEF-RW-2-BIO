@@ -13,8 +13,9 @@ data {
 
   matrix[N_trees, N_years] logy;
   int<lower=0> core2tree[N_trees];
-  int<lower=0> rw_year_start[N_trees];
-  int<lower=0> rw_year_end[N_trees];
+
+  // int<lower=0> rw_year_start[N_trees];
+  // int<lower=0> rw_year_end[N_trees];
 
   real<lower=0> d[N_dbh];
   int<lower=0> d2tree[N_dbh];
@@ -39,7 +40,7 @@ parameters {
 
   //real<lower=1e-6> sig_d_obs;
 
-  real<lower=1e-6,upper=500> d_init[N_trees];
+  real<lower=0,upper=10> d_init[N_trees];
 
   matrix<lower=1e-6>[N_trees, N_years] x;
 
@@ -51,11 +52,17 @@ transformed parameters {
 
     d_latent[tree,1] = d_init[tree] + 2 * x[tree, 1] / 10 ;
 
+    //print(d_latent[tree,1]);
+
     for (year in 2:N_years) {
 
       d_latent[tree,year] = d_latent[tree, year-1] + 2 * x[tree, year] / 10 ;
 
+      //print(d_latent[tree,year]);
+
     }
+    // print(d_latent[tree,]);
+
   }
 
 }
@@ -68,10 +75,13 @@ model {
   sig_x  ~ uniform(1e-6, 1000);
   beta_sd   ~ uniform(1e-6, 1000);
   beta_t_sd ~ uniform(1e-6, 1000);
+
+  // print(beta0);
   
     
   for(tree in 1:N_trees) {
-    d_init[tree] ~ uniform(1e-6, 500);
+    d_init[tree] ~ uniform(0, 10);
+    // print(d_init[tree]);
     beta[tree] ~ normal(beta0, beta_sd);
   }
   
@@ -122,7 +132,11 @@ model {
     // for (year in rw_year_start[core]:rw_year_end[core]) {
       if (logy[tree,year] == -999){
       } else {
-        logy[tree, year] ~ normal(log(x[core2tree[tree], year]), sig_x_obs);
+	// print(logy[tree,year]);
+	// print(x[tree,year]);
+	//print(x[;
+        // logy[tree, year] ~ normal(log(x[core2tree[tree], year]), sig_x_obs);
+	logy[tree, year] ~ normal(log(x[tree, year]), sig_x_obs);
       }
     }
   }
