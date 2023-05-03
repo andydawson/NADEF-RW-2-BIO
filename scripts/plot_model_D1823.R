@@ -7,12 +7,15 @@ library(tidyr)
 
 update = TRUE
 
+model = 'species_time'
+
 if (update){
   dat = readRDS('data/D1823/D1823_input_update.RDS')
-  post = readRDS('output/D1823_output_update.RDS')
+  # post = readRDS('output/D1823_output_update.RDS')
+  post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
-  dat = readRDS('data/D1823/D1823_input.RDS')
-  post = readRDS('output/D1823_output.RDS') 
+  # dat = readRDS('data/D1823/D1823_input.RDS')
+  # post = readRDS('output/D1823_output.RDS') 
 }
 
 names(post)
@@ -29,6 +32,9 @@ list2env(post, envir = globalenv())
 logy[logy==(-999)] = NA
 y[y==(-999)] = NA
 
+year_lo = 1950
+year_hi = 2021
+
 #######################################################################################################################################
 #
 #######################################################################################################################################
@@ -37,19 +43,24 @@ y[y==(-999)] = NA
 
 # plot data and model DBH for each tree
 if (update) {
-  pdf('figures/dbh_vs_year_estimated_update.pdf', width=10, height=6)
+  pdf(paste0('figures/dbh_vs_year_estimated_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/dbh_vs_year_estimated.pdf', width=10, height=6)
+  pdf(paste0('figures/dbh_vs_year_estimated_', model, '.pdf'), width=10, height=6)
 }
 for (i in 1:N_trees){
   
+  print(i)
+  
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
+  
+  year_start = rw_year_start[i]
+  year_end = rw_year_end[i]
 
   d_iter = d_latent[, i, ]
 
-  d_mean = apply(d_iter, 2, mean)
-  d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+  d_mean = apply(d_iter, 2, mean, na.rm=TRUE)
+  d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
 
   dbh_tree = data.frame(d_mean = d_mean, 
                         d_median = d_quant[,2], 
@@ -75,6 +86,7 @@ for (i in 1:N_trees){
     # ylim(c(0,500)) +
     xlab('year') +
     ylab('dbh (cm)') +
+    xlim(c(year_lo, year_hi)) +
     theme_bw(16)  +
     # ggtitle(paste0('Tree ', i)) +
     annotation_custom(grob)
@@ -89,9 +101,9 @@ dev.off()
 
 # plot data and model DBH for each tree
 if (update) {
-  pdf('figures/rw_vs_year_estimated_update.pdf', width=10, height=6)
+  pdf(paste0('figures/rw_vs_year_estimated_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/rw_vs_year_estimated.pdf', width=10, height=6)
+  pdf(paste0('figures/rw_vs_year_estimated_', model, '.pdf'), width=10, height=6)
 }
 for (i in 1:N_trees){
   
@@ -121,6 +133,7 @@ for (i in 1:N_trees){
     # ylim(c(0,500)) +
     xlab('year') +
     ylab('rw (mm)') +
+    xlim(c(year_lo, year_hi)) +
     theme_bw(16)  +
     # ggtitle(paste0('Tree ', i)) +
     annotation_custom(grob)
@@ -179,12 +192,28 @@ ggplot(data=beta_t_quant) +
   geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
   xlab('year') +
   ylab('beta_t') +
+  xlim(c(year_lo, year_hi)) +
   theme_bw(16) +
   facet_grid(species_id~.)
 if (update) {
   ggsave('figures/time_species_effect_estimated_update.pdf')
 } else {
   ggsave('figures/time_species_effect_estimated.pdf')
+}
+
+ggplot(data=beta_t_quant) +
+  geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+  geom_point(aes(x=year, y=mid)) + 
+  geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
+  xlab('year') +
+  ylab('beta_t') +
+  xlim(c(year_lo, year_hi)) +
+  theme_bw(16) +
+  facet_grid(species_id~.) 
+if (update) {
+  ggsave('figures/time_species_effect_estimated_update.pdf', width=10, height=8)
+} else {
+  ggsave('figures/time_species_effect_estimated.pdf', width=10, height=8)
 }
 
 # #######################################################################################################################################
@@ -247,6 +276,7 @@ beta = post$beta
 beta_quant = data.frame(t(apply(beta, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 colnames(beta_quant) = c('lo', 'mid', 'hi')
 beta_quant$tree = seq(1, nrow(beta_quant))
+beta_quant$species = species_ids[core2species[beta_quant$tree]]
 
 # ggplot(data=beta_quant) +
 #   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
@@ -256,13 +286,52 @@ beta_quant$tree = seq(1, nrow(beta_quant))
 #   ylab('beta') +
 #   theme_bw(16)
 
+# beta_quant = beta_quant[order(beta_quant$species),]
+# beta_quant$species = factor(beta_quant$species)
+
 ggplot(data=beta_quant) +
   geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
-  geom_point(aes(x=tree, y=mid)) + 
-  geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
+  geom_point(aes(x=tree, y=mid, colour=species)) + 
+  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
   xlab('tree') +
   ylab('beta') +
-  theme_bw(16)
+  theme_bw(16) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) 
+  
+
+ggplot(data=beta_quant) +
+  geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
+  geom_point(aes(x=tree, y=mid, colour=species)) + 
+  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
+  xlab('tree') +
+  ylab('beta') +
+  theme_bw(16) +
+  coord_flip()
+
+# # beta_quant$tree = factor(beta_quant$tree)
+beta_quant = beta_quant %>% group_by(species) %>% arrange(mid, .by_group = TRUE)
+beta_quant$tree = factor(beta_quant$tree, levels = beta_quant$tree)
+
+ggplot(data=beta_quant) +
+  geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
+  geom_point(aes(x=tree, y=mid, colour=species)) + 
+  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
+  xlab('tree') +
+  ylab('beta') +
+  theme_bw(16) +
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank()) +
+  facet_wrap(~species, scales="free_x")
+
+
+# ggplot(data=beta_quant) +
+#   geom_density(aes(x=beta0_quant$mid), lty=2, lwd=1.2) +
+#   geom_point(aes(x=tree, y=mid, colour=species)) + 
+#   geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
+#   xlab('tree') +
+#   ylab('beta') +
+#   theme_bw(16) +
+#   facet_wrap(~species, scales="free_x")
 
 if (update) {
   ggsave('figures/individual_effect_estimated_update.pdf')

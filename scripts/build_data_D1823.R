@@ -23,8 +23,10 @@ if (update) {
 ggplot(data=meta) + 
   geom_point(aes(x=x,y=y)) 
 
-hi = 100
-lo = 0
+# hi = 100
+# lo = 0
+hi = 70
+lo = 30
 meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
@@ -36,6 +38,7 @@ ggplot(data=meta_sub) +
   geom_point(aes(x=x,y=y)) 
 
 meta_sub = meta_sub[which(!is.na(meta_sub$dbh)),]
+meta_sub = meta_sub[which(meta_sub$stem_id != ""),]
 # meta_sub = meta_sub[which(meta_sub$year %in% c(1994, 2004, 2011, 2019)),]
 
 length(unique(meta_sub$stem_id))
@@ -111,8 +114,47 @@ core2tree = stat_ids
 core2species = meta_sub$species_code[match(core2tree, meta_sub$stat_id)]
 core2stemids = stem_ids
 
-rw_year_start = apply(logy, 1, which.min)
-rw_year_end   = apply(logy, 1, which.max)
+rw_year_start = rep(year_lo, N_trees)
+rw_year_end   = rep(year_hi, N_trees)
+# rw_year_start = rep(NA, N_trees)
+# rw_year_end   = rep(NA, N_trees)
+# for (i in 1:N_trees){
+#   
+#   rw_tree = logy[i,]
+#   
+#   if (all(!is.na(rw_tree))){
+#     rw_year_start[i] = which.min(rw_tree)
+#     rw_year_end[i] = which.max(rw_tree)
+#     
+#     d_idx = which(d2tree == i)
+#     d_year_start = min(d2year[d_idx])
+#     d_year_end   = max(d2year[d_idx])
+#     
+#     if (d_year_start < rw_year_start[i]){
+#       rw_year_start[i] = d_year_start #- 10?
+#     }
+#     
+#     if (d_year_end < rw_year_end[i]){
+#       rw_year_end[i] = d_year_end #- 10?
+#     }
+#     
+#   } else {
+#     d_idx = which(d2tree == i)
+#     rw_year_start[i] = min(d2year[d_idx]) - 50
+#     rw_year_end[i] = max(d2year[d_idx])
+#   }
+#   
+#   if (rw_year_end[i] == 120){
+#     rw_year_end[i] == 122
+#   }
+# }
+
+
+
+# rw_year_start = apply(logy, 1, which.min)
+# sapply(rw_year_start, function(x) if(x==0){x=1})
+# 
+# rw_year_end   = apply(logy, 1, which.max)
 
 logy[is.na(logy)] = as.integer(-999)
 
@@ -139,6 +181,8 @@ core2species
 d
 d2tree
 d2year
+
+head(logy)
 
 if (update) {
   fname = 'data/D1823/D1823_input_update.RDS'
