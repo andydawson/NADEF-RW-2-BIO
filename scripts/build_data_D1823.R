@@ -114,8 +114,8 @@ core2tree = stat_ids
 core2species = meta_sub$species_code[match(core2tree, meta_sub$stat_id)]
 core2stemids = stem_ids
 
-rw_year_start = rep(year_lo, N_trees)
-rw_year_end   = rep(year_hi, N_trees)
+rw_year_start = rep(which(years==year_lo), N_trees)
+rw_year_end   = rep(which(years==year_hi), N_trees)
 # rw_year_start = rep(NA, N_trees)
 # rw_year_end   = rep(NA, N_trees)
 # for (i in 1:N_trees){

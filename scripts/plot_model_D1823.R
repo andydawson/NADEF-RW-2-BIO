@@ -7,7 +7,8 @@ library(tidyr)
 
 update = TRUE
 
-model = 'species_time'
+# model = 'species_time'
+model = 'species_time_interval'
 
 if (update){
   dat = readRDS('data/D1823/D1823_input_update.RDS')

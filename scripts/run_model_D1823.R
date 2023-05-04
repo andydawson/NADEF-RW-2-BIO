@@ -102,7 +102,7 @@ compiled <- stan_model(file = 'models/tree_model_species_time_interval.stan')
 fit <- sampling(compiled, 
                 data = dat, 
                 # init = init,
-                iter = 500, 
+                iter = 2000, 
                 chains = 1,
                 verbose=TRUE)
 plot(fit)
