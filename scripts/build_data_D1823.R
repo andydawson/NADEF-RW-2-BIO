@@ -3,6 +3,7 @@ library(ggplot2)
 # for original data: update = FALSE
 # for updated data: update = TRUE
 update = TRUE
+data_name = 'interval'
 
 # meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 # rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
@@ -59,7 +60,14 @@ stat_ids = seq(1, N_trees)
 meta_sub$stat_id = match(meta_sub$stem_id, stem_ids)
 meta_sub$species_code = match(meta_sub$species_id, species_ids)
 
+# rw_sub[,4:ncol(rw_sub)]
+# 
+# rw_first_idx = apply(rw_sub[,4:ncol(rw_sub)], 1, function(x) which(!is.na(x))[1])
+# rw_years = as.numeric(substr(colnames(rw_sub)[4:ncol(rw_sub)], 2, 5))
+# year_lo = rw_years[min(rw_first_idx)]
+
 year_lo = 1900
+
 year_hi = 2019
 if (update){
   year_hi = 2021
@@ -114,40 +122,42 @@ core2tree = stat_ids
 core2species = meta_sub$species_code[match(core2tree, meta_sub$stat_id)]
 core2stemids = stem_ids
 
-rw_year_start = rep(which(years==year_lo), N_trees)
-rw_year_end   = rep(which(years==year_hi), N_trees)
-# rw_year_start = rep(NA, N_trees)
-# rw_year_end   = rep(NA, N_trees)
-# for (i in 1:N_trees){
-#   
-#   rw_tree = logy[i,]
-#   
-#   if (all(!is.na(rw_tree))){
-#     rw_year_start[i] = which.min(rw_tree)
-#     rw_year_end[i] = which.max(rw_tree)
-#     
-#     d_idx = which(d2tree == i)
-#     d_year_start = min(d2year[d_idx])
-#     d_year_end   = max(d2year[d_idx])
-#     
-#     if (d_year_start < rw_year_start[i]){
-#       rw_year_start[i] = d_year_start #- 10?
-#     }
-#     
-#     if (d_year_end < rw_year_end[i]){
-#       rw_year_end[i] = d_year_end #- 10?
-#     }
-#     
-#   } else {
-#     d_idx = which(d2tree == i)
-#     rw_year_start[i] = min(d2year[d_idx]) - 50
-#     rw_year_end[i] = max(d2year[d_idx])
-#   }
-#   
-#   if (rw_year_end[i] == 120){
-#     rw_year_end[i] == 122
-#   }
-# }
+# rw_year_start = rep(which(years==year_lo), N_trees)
+# rw_year_end   = rep(which(years==year_hi), N_trees)
+rw_year_start = rep(NA, N_trees)
+rw_year_end   = rep(NA, N_trees)
+for (i in 1:N_trees){
+
+  rw_tree = logy[i,]
+
+  if (any(!is.na(rw_tree))){
+    rw_tree_years = which(!is.na(rw_tree))
+
+    rw_year_start[i] = min(rw_tree_years)
+    rw_year_end[i] = max(rw_tree_years)
+
+    d_idx = which(d2tree == i)
+    d_year_start = min(d2year[d_idx])
+    d_year_end   = max(d2year[d_idx])
+
+    if (d_year_start < rw_year_start[i]){
+      rw_year_start[i] = d_year_start #- 10?
+    }
+
+    if (d_year_end < rw_year_end[i]){
+      rw_year_end[i] = d_year_end #- 10?
+    }
+
+  } else {
+    d_idx = which(d2tree == i)
+    rw_year_start[i] = min(d2year[d_idx]) - 50
+    rw_year_end[i] = max(d2year[d_idx])
+  }
+
+  if ((rw_year_end[i] == 120)|(d_year_end == 120)){
+    rw_year_end[i] == 122
+  }
+}
 
 
 
@@ -185,9 +195,9 @@ d2year
 head(logy)
 
 if (update) {
-  fname = 'data/D1823/D1823_input_update.RDS'
+  fname = paste0('data/D1823/D1823_input_update_', data_name, '.RDS')
 } else {
-  fname = 'data/D1823/D1823_input.RDS'
+  fname = paste0('data/D1823/D1823_input_', data_name, '.RDS')
 }
 
 saveRDS(list(N_trees = N_trees, 

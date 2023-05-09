@@ -6,17 +6,49 @@ library(tidyr)
 # library(ggdogs)
 
 update = TRUE
+interval_cut = TRUE
 
-# model = 'species_time'
-model = 'species_time_interval'
+model = 'species_time'
+# model = 'species_time_interval'
 
 if (update){
-  dat = readRDS('data/D1823/D1823_input_update.RDS')
+  # dat = readRDS('data/D1823/D1823_input_update.RDS')
+  dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
   # post = readRDS('output/D1823_output_update.RDS')
   post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
   # dat = readRDS('data/D1823/D1823_input.RDS')
   # post = readRDS('output/D1823_output.RDS') 
+}
+
+list2env(dat, envir = globalenv())
+list2env(post, envir = globalenv())
+
+if (interval_cut){
+  for (i in 1:N_trees){
+    year_start_tree = rw_year_start[i]
+    year_end_tree = rw_year_end[i]
+    
+    if (year_start_tree != 1){
+    
+      # post$x[,i,1:(year_start_tree-1)] = NA
+      # post$d_latent[,i,1:(year_start_tree-1)] = NA
+      
+      x[,i,1:(year_start_tree-1)] = NA
+      d_latent[,i,1:(year_start_tree-1)] = NA
+      
+    }
+    
+    if (year_end_tree != max(years_idx)){
+      
+      # post$x[,i,(year_end_tree+1):N_years] = NA
+      # post$d_latent[,i,(year_end_tree+1):N_years] = NA 
+      
+      x[,i,(year_end_tree+1):N_years] = NA
+      d_latent[,i,(year_end_tree+1):N_years] = NA 
+      
+    }
+  }
 }
 
 names(post)
@@ -25,16 +57,13 @@ dim(post$x)
 x_post = post$x
 x_post[,1,1]
 
-x = apply(x_post, c(2,3), mean)
-
-list2env(dat, envir = globalenv())
-list2env(post, envir = globalenv())
+# x = apply(x_post, c(2,3), mean)
 
 logy[logy==(-999)] = NA
 y[y==(-999)] = NA
 
-year_lo = 1950
-year_hi = 2021
+year_lo = min(years)
+year_hi = max(years)
 
 #######################################################################################################################################
 #
@@ -114,7 +143,7 @@ for (i in 1:N_trees){
   x_iter = x[, i, ]
 
   x_mean = apply(x_iter, 2, mean)
-  x_quant = t(apply(x_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+  x_quant = t(apply(x_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
 
   rw_tree = data.frame(x_mean = x_mean, x_median = x_quant[,2], x_lo = x_quant[,1], x_hi = x_quant[,3], year = years)
 
