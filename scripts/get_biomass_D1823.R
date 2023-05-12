@@ -11,34 +11,69 @@ coords_D1823 = as.numeric(coords[which(coords$plot_id == 'H1823'), c('long', 'la
 # 
 ############################################################################################
 
+update = TRUE
+interval_cut = TRUE
+
+model = 'species_time'
+# model = 'species_time_interval'
+
 if (update){
-dat  = readRDS('data/D1823/D1823_input_update.RDS')
-post = readRDS('output/D1823_output_update.RDS')
+  # dat = readRDS('data/D1823/D1823_input_update.RDS')
+  dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
+  # post = readRDS('output/D1823_output_update.RDS')
+  post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
-  dat  = readRDS('data/D1823/D1823_input.RDS')
-  post = readRDS('output/D1823_output.RDS') 
+  # dat = readRDS('data/D1823/D1823_input.RDS')
+  # post = readRDS('output/D1823_output.RDS') 
 }
-
-names(post)
-dim(post$d_latent)
-
-d_post = post$d_latent
-d_post[,1,]
-N_iter = dim(d_post)[1]
-
-d_post_mean = apply(d_post, c(2,3), mean)
-dim(d_post_mean)
 
 list2env(dat, envir = globalenv())
 list2env(post, envir = globalenv())
 
+if (interval_cut){
+  for (i in 1:N_trees){
+    year_start_tree = rw_year_start[i]
+    year_end_tree = rw_year_end[i]
+    
+    if (year_start_tree != 1){
+      
+      # post$x[,i,1:(year_start_tree-1)] = NA
+      # post$d_latent[,i,1:(year_start_tree-1)] = NA
+      
+      x[,i,1:(year_start_tree-1)] = NA
+      d_latent[,i,1:(year_start_tree-1)] = NA
+      
+    }
+    
+    if (year_end_tree != max(years_idx)){
+      
+      # post$x[,i,(year_end_tree+1):N_years] = NA
+      # post$d_latent[,i,(year_end_tree+1):N_years] = NA 
+      
+      x[,i,(year_end_tree+1):N_years] = NA
+      d_latent[,i,(year_end_tree+1):N_years] = NA 
+      
+    }
+  }
+}
+
+names(post)
+dim(post$x)
+
+x_post = post$x
+x_post[,1,1]
+
+# x = apply(x_post, c(2,3), mean)
+
+logy[logy==(-999)] = NA
+y[y==(-999)] = NA
+
+year_lo = min(years)
+year_hi = max(years)
 # species_table = data.frame(species_ids = species_ids,
 #                            genus = c('Thuja', 'Abies', 'Populus', 'Betula', 'Picea'),
 #                            species = c('occidentalis', 'balsamea', 'tremuloides', 'papyrifera', 'glauca'))
 species_table = read.csv('data/species_table.csv', stringsAsFactors = FALSE)
-
-# logy[logy==(-999)] = NA
-# y[y==(-999)] = NA
 
 # ############################################################################################
 # # 
@@ -114,7 +149,8 @@ species_table = read.csv('data/species_table.csv', stringsAsFactors = FALSE)
 ############################################################################################
 # 
 ############################################################################################
-
+N_trees = dim(d_latent)[2]
+N_iter  = dim(d_latent)[1]
 biomass_iter = array(NA, c(N_iter/2, N_trees, N_years))
 biomass_iter = array(NA, c(50, N_trees, N_years))
 
@@ -123,10 +159,12 @@ for (iter in 1:50){#N_iter){
   for (tree in 1:N_trees){
     print(tree)
     
-    tree_genus   = species_table[d2species[tree],'genus']
-    tree_species = species_table[d2species[tree],'species']
+    # tree_genus   = species_table[d2species[tree],'genus']
+    # tree_species = species_table[d2species[tree],'species']
+    tree_genus   = species_table[core2species[tree],'genus']
+    tree_species = species_table[core2species[tree],'species']
     
-    biomass_iter[iter, tree,] = get_biomass(dbh = d_post[iter, tree,],
+    biomass_iter[iter, tree,] = get_biomass(dbh = d_latent[iter, tree,],
                                        genus = tree_genus,
                                        species = tree_species,
                                        coords = coords_D1823)
@@ -159,10 +197,10 @@ agb_melt$species_id = species_ids[core2species[agb_melt$stat_id]]
 library(dplyr)
 agb_quants = agb_melt %>% 
   dplyr::group_by(stat_id, year, species_id) %>%
-  dplyr::summarize(agb_mean = mean(agb), 
-            agb_median = median(agb), 
-            agb_lo = quantile(agb, c(0.025)),
-            agb_hi = quantile(agb, c(0.975)), .groups="keep")
+  dplyr::summarize(agb_mean = mean(agb, na.rm=TRUE), 
+            agb_median = median(agb, na.rm=TRUE), 
+            agb_lo = quantile(agb, c(0.025), na.rm=TRUE),
+            agb_hi = quantile(agb, c(0.975), na.rm=TRUE), .groups="keep")
 
 
 ggplot() +
@@ -294,7 +332,22 @@ ggplot() +
   geom_line(data=agbi_quants_species, aes(x=year, y=agbi_median, group=species_id, colour=species_id)) +
   theme_bw(14) +
   xlab('year') +
-  ylab('biomass increment (kg)') 
+  ylab('biomass increment (kg)')  +
+  xlim(c(year_lo, year_hi)) 
+dev.off()
+
+if (update){
+  pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
+} else {
+  pdf('figures/agbi_vs_year_by_species.pdf', width=10, height=6)
+}
+ggplot() +
+  geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
+  geom_line(data=agbi_quants_species, aes(x=year, y=agbi_median, group=species_id, colour=species_id)) +
+  theme_bw(18) +
+  xlab('year') +
+  ylab('biomass increment (kg)') +
+  xlim(c(year_lo, year_hi)) 
 dev.off()
 
 if (update){
@@ -308,7 +361,8 @@ pdf('figures/agbi_vs_year_facet_species.pdf', width=10, height=6)
   theme_bw(14) +
   xlab('year') +
   ylab('biomass increment (kg)')  +
-  facet_wrap(~species_id)
+  xlim(c(year_lo, year_hi)) +
+  facet_wrap(~species_id) 
 print(p)
 dev.off()
 
@@ -331,9 +385,10 @@ pdf('figures/agbi_vs_year_overall_update.pdf', width=10, height=6)
 p <- ggplot() +
   geom_ribbon(data=agbi_quants_all, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +
   geom_line(data=agbi_quants_all, aes(x=year, y=agbi_median)) +
-  theme_bw(14) +
+  theme_bw(16) +
   xlab('year') +
-  ylab('biomass increment (kg)') 
+  ylab('biomass increment (kg)') +
+  xlim(c(year_lo, year_hi)) 
 print(p)
 dev.off()
 
@@ -349,3 +404,31 @@ dev.off()
 #   xlab('year') +
 #   ylab('Biomass increment (kg)') +
 #   facet_wrap(~species_id)
+
+############################################################################################
+# uncertainty
+############################################################################################
+
+agbi_quants_all$width = agbi_quants_all$agbi_hi - agbi_quants_all$agbi_lo
+
+agbi_quants_all_sub = subset(agbi_quants_all, year %in% seq(year_lo, year_hi))
+
+ggplot(data=agbi_quants_all_sub) +
+  geom_histogram(aes(x=width)) +
+  theme_bw(16)
+
+ggplot(data=agbi_quants_all_sub) +
+  geom_point(aes(x=year, y=width)) +
+  theme_bw(16)
+
+
+
+agbi_quants_species$width = agbi_quants_species$agbi_hi - agbi_quants_species$agbi_lo
+
+agbi_quants_species_sub = subset(agbi_quants_species, year %in% seq(year_lo, year_hi))
+
+ggplot(data=agbi_quants_species_sub) +
+  geom_histogram(aes(x=width)) +
+  theme_bw(16) +
+  facet_wrap(~species_id)
+
