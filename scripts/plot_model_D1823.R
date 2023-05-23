@@ -22,6 +22,62 @@ if (update){
   # post = readRDS('output/D1823_output.RDS') 
 }
 
+#create dataframe of min, mean, and median, years when dbh went positive
+test = apply(post$d_latent, c(2,3), min)
+plot(test[21,])
+
+year_index <- apply(test, 1, FUN = function(x){
+  min(which(x > 0))
+}
+)
+min_year_negd <- c(1900:2021)[year_index]
+
+test = apply(post$d_latent, c(2,3), mean)
+plot(test[21,])
+
+year_index <- apply(test, 1, FUN = function(x){
+  min(which(x > 0))
+}
+)
+mean_year_negd <- c(1900:2021)[year_index]
+
+test = apply(post$d_latent, c(2,3), median)
+plot(test[21,])
+
+year_index <- apply(test, 1, FUN = function(x){
+  min(which(x > 0))
+}
+)
+median_year_negd <- c(1900:2021)[year_index]
+
+
+test = apply(post$d_latent, c(2,3), max)
+plot(test[21,])
+
+year_index <- apply(test, 1, FUN = function(x){
+  min(which(x > 0))
+}
+)
+max_year_negd <- c(1900:2021)[year_index]
+max <- as.data.frame(max_year_negd)
+
+mean <- as.data.frame(mean_year_negd)
+median <- as.data.frame(median_year_negd)
+min <- as.data.frame(min_year_negd)
+
+negd_year <- cbind(mean, median)
+negd_year <- cbind(min, negd_year)
+
+
+stem_ids = unique(meta_sub$stem_id)
+core2stemids = stem_ids
+ids <- as.data.frame(core2stemids)
+negd_year <- cbind(core2stemids, negd_year)
+
+negd_year <- cbind(max, negd_year)
+
+write.csv(negd_year, 'data/negative_diameter_year.csv')
+
 list2env(dat, envir = globalenv())
 list2env(post, envir = globalenv())
 
