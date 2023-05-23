@@ -51,6 +51,12 @@ length(unique(dat$ancient_id))
 length(unique(dat$stem_id))
 #2415
 
+
+N_dup = length(which(duplicated(dat$stem_id)))
+dup_new_ids = paste0('D', seq(1, N_dup))
+
+dat[which(duplicated(dat$stem_id)), 'stem_id'] = dup_new_ids
+
 # melt dataframe, each possible observation becomes a row
 dat_melt = melt(dat, id.vars=c('parcel', 'species_id', 'stem_id', 'ancient_id', 'x', 'y'))
 

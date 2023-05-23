@@ -37,6 +37,7 @@ dbh = read.csv('data/D1823/D1823_dbh.csv', stringsAsFactors = FALSE)
 # match new stem ids with Malecki ids
 # dbh$stem_id = id_translate[match(dbh$stem_id, id_translate$mal), 'census']
 dbh$stem_id = dbh$census_id
+dbh$stem_id[dbh$stem_id == "C713"] = "I75"
 
 # create data frame with new(?) stem ids and mean dbh
 dbh = data.frame(dbh[,c(1,3)], dbh=rowMeans(dbh[,4:8]))
@@ -106,9 +107,9 @@ for (i in 1:length(fnames)){
 dat_all = combine.rwl(dat)
 
 #create new data frame with tree ids
-ids = read.ids(dat_all, stc = c(3,4,1))
+# ids = read.ids(dat_all, stc = c(3,4,1))
 #create matrix of rw increments organized by tree x year
-dat_all = treeMean(dat_all, ids=ids)
+# dat_all = treeMean(dat_all, ids=ids)
 #transforms from matrix to table
 dat_all = t(dat_all)
 
@@ -118,6 +119,7 @@ rw_ids = rownames(dat_all)
 rw_ids = id_translate[match(rw_ids, id_translate$mal), 'census']
 #add id columns to table 
 dat_all = data.frame(stem_id = rw_ids, species_id = meta[match(rw_ids, meta$stem_id), 'species_id'], dat_all)
+dat_all$stem_id[dat_all$stem_id == "C713"] = "I75"
 
 #create new data frame from table
 rw_new = dat_all
@@ -185,7 +187,13 @@ rw[which(!(rw$stem_id %in% meta_new$stem_id)), 'stem_id']
 rw_add = matrix(-999, nrow=nrow(rw), ncol=8)
 colnames(rw_add) = paste0('X', seq(2014, 2021))
 rw_expand = data.frame(rw, rw_add)
-rw_expand = rw_expand[,!(colnames(rw_expand) %in%  paste0('X', seq(1852, 1858)))]
+# rw_expand = rw_expand[,!(colnames(rw_expand) %in%  paste0('X', seq(1852, 1858)))]
+
+# create data frame for overlapping trees
+# the rw and rw_new should have the same number of columns (years)
+rw_add2 = matrix(NA, nrow=20, ncol=15)
+colnames(rw_add2) = paste0('X', seq(1852, 1866))
+rw_new <- cbind(rw_new[, 1:2], rw_add2, rw_new[, -1:-2])
 
 #create data frame for overlapping(?) trees
 rw_in = rw_new[which(rw_new$stem_id %in% rw_expand$stem_id),]
