@@ -50,7 +50,15 @@ d_median = apply(post$d_latent, c(2,3), median)
 median_year_negd = apply(d_median, 1, function(x) min(which(x>0)))
 
 
-summary_negd = data.frame(max_year_negd, mean_year_negd, median_year_negd, min_year_negd)
+summary_negd = data.frame(no_negd = max_year_negd, 
+                          post_mean_negd = mean_year_negd, 
+                          post_median_negd = median_year_negd, 
+                          first_negd = min_year_negd)
+summary_negd$no_negd = years[summary_negd$no_negd]
+summary_negd$mean_negd = years[summary_negd$mean_negd]
+summary_negd$median_negd = years[summary_negd$median_negd]
+summary_negd$first_negd = years[summary_negd$first_negd]
+
 summary_negd = t(apply(summary_negd, 1, function(x) years[x]))
 
 core2stemids
