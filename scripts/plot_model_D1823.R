@@ -50,22 +50,31 @@ d_median = apply(post$d_latent, c(2,3), median)
 median_year_negd = apply(d_median, 1, function(x) min(which(x>0)))
 
 
-summary_negd = data.frame(no_negd = max_year_negd, 
-                          post_mean_negd = mean_year_negd, 
-                          post_median_negd = median_year_negd, 
-                          first_negd = min_year_negd)
-summary_negd$no_negd = years[summary_negd$no_negd]
-summary_negd$mean_negd = years[summary_negd$mean_negd]
-summary_negd$median_negd = years[summary_negd$median_negd]
-summary_negd$first_negd = years[summary_negd$first_negd]
+summary_negd = data.frame(first_posd = max_year_negd, 
+                          post_mean_posd = mean_year_negd, 
+                          post_median_posd = median_year_negd, 
+                          all_posd = min_year_negd)
+summary_negd$first_posd = years[summary_negd$first_posd]
+summary_negd$post_mean_posd = years[summary_negd$post_mean_posd]
+summary_negd$post_median_posd = years[summary_negd$post_median_posd]
+summary_negd$all_posd = years[summary_negd$all_posd]
 
-summary_negd = t(apply(summary_negd, 1, function(x) years[x]))
+# summary_negd = t(apply(summary_negd, 1, function(x) years[x]))
 
-core2stemids
+# core2stemids
 
-summary_negd <- data.frame(core2stemids, summary_negd)
+summary_negd <- data.frame(stem_ids = core2stemids, summary_negd)
 
 write.csv(summary_negd, 'data/negative_diameter_year.csv')
+
+summary_negd_melt = melt(summary_negd, id.vars='stem_ids')
+
+ggplot(data=summary_negd_melt) +
+  geom_histogram(aes(x=value, y=after_stat(density))) +
+  facet_wrap(~variable) + 
+  theme_bw(16)
+
+
 
 
 if (interval_cut){
