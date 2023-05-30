@@ -223,4 +223,3 @@ rw_update <- rw_update %>%
 
 write.csv(rw_update, 'data/D1823/D1823_rw_update.csv', row.names=FALSE)
 
-                
