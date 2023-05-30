@@ -216,6 +216,11 @@ rw_out[rw_out == 0] = 0.001
 rw_expand = rbind(rw_expand, rw_out)
 rw_update = rw_expand
 
+#average rw data for trees that were measured twice
+rw_update <- rw_update %>% 
+  group_by(stem_id) %>% 
+  dplyr::summarise(species_id = first(species_id), long_id = first(long_id), across(where(is.numeric), mean, na.rm = T))
+
 write.csv(rw_update, 'data/D1823/D1823_rw_update.csv', row.names=FALSE)
 
                 
