@@ -55,6 +55,8 @@ length(unique(dat$stem_id))
 N_dup = length(which(duplicated(dat$stem_id)))
 dup_new_ids = paste0('D', seq(1, N_dup))
 
+dup_ids = dat[which(duplicated(dat$stem_id)), 'stem_id'] 
+
 dat[which(duplicated(dat$stem_id)), 'stem_id'] = dup_new_ids
 
 # melt dataframe, each possible observation becomes a row

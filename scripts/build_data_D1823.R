@@ -24,12 +24,19 @@ if (update) {
 
 # subset the data to smaller region
 ggplot(data=meta) + 
-  geom_point(aes(x=x,y=y)) 
+  geom_point(aes(x=x,y=y)) +
+  coord_fixed()
+
+meta$status_id = tolower(meta$status_id)
+
+length(which((meta$status_id %in% c('md', 'mc'))))
+
+meta = meta[which(!(meta$status_id %in% c('md', 'mc'))),]
 
 # hi = 100
 # lo = 0
-hi = 70
-lo = 30
+hi = 100
+lo = 0
 meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
@@ -154,6 +161,7 @@ for (i in 1:N_trees){
     d_idx = which(d2tree == i)
     rw_year_start[i] = min(d2year[d_idx]) - 50
     rw_year_end[i] = max(d2year[d_idx])
+    d_year_end = 120
   }
 
   if ((rw_year_end[i] == 120)|(d_year_end == 120)){

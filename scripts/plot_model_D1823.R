@@ -6,9 +6,9 @@ library(tidyr)
 # library(ggdogs)
 
 update = TRUE
-interval_cut = TRUE
+interval_cut = FALSE
 
-model = 'species_time'
+# model = 'species_time'
 # model = 'species_time_interval'
 model = 'species_time_negd'
 
