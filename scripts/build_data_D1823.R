@@ -5,12 +5,25 @@ library(ggplot2)
 # for original data: update = FALSE
 # for updated data: update = TRUE
 update = TRUE
-data_name = 'interval'
+data_name = 'pith'
 
 # meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 # rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
+
+pith = read.csv('data/D1823/D1823_pith_update.csv')
+# pith$pith_missed = rowSums(pith[,4:5], na.rm=TRUE)
+
+keep_numeric = function(x){ 
+  if (any(!is.na(x))){
+    x[which(!is.na(x))]
+  } else {
+    NA
+  }
+}
+
+pith$pith_missed = apply(pith[,4:5], 1, keep_numeric)
 
 if (update) {
   meta = read.csv('data/D1823/D1823_meta_update.csv', stringsAsFactors = FALSE)
@@ -136,40 +149,59 @@ core2stemids = stem_ids
 rw_year_start = rep(NA, N_trees)
 rw_year_end   = rep(NA, N_trees)
 for (i in 1:N_trees){
-
+  
   rw_tree = logy[i,]
-
+  
   if (any(!is.na(rw_tree))){
     rw_tree_years = which(!is.na(rw_tree))
-
+    
     rw_year_start[i] = min(rw_tree_years)
     rw_year_end[i] = max(rw_tree_years)
-
+    
     d_idx = which(d2tree == i)
     d_year_start = min(d2year[d_idx])
     d_year_end   = max(d2year[d_idx])
-
+    
     if (d_year_start < rw_year_start[i]){
       rw_year_start[i] = d_year_start #- 10?
     }
-
+    
     if (d_year_end < rw_year_end[i]){
       rw_year_end[i] = d_year_end #- 10?
     }
-
+    
   } else {
     d_idx = which(d2tree == i)
     rw_year_start[i] = min(d2year[d_idx]) - 50
     rw_year_end[i] = max(d2year[d_idx])
     d_year_end = 120
   }
-
+  
   if ((rw_year_end[i] == 120)|(d_year_end == 120)){
     rw_year_end[i] == 122
   }
 }
 
+pith$stat_id = NA
+pith$stat_id = core2tree[match(pith$stem_id, core2stemids)]
 
+# no match for I12, maybe it's a small tree with DBH<10?
+pith = pith[which(!is.na(pith$stat_id)),]
+
+pith$rw_year_start = rw_year_start[pith$stat_id]
+pith$pith_year = pith$rw_year_start - pith$pith_missed
+
+# remove those with pith years less than year_lo
+pith = pith[which(pith$pith_year>0),]
+
+pith2tree = pith$stat_id
+pith2stemids = pith$stem_id
+pith2year = pith$pith_year
+
+pith2species = meta_sub$species_code[match(pith2tree, meta_sub$stat_id)]
+
+N_pith = nrow(pith)
+pith_value = rep(0, N_pith)
 
 # rw_year_start = apply(logy, 1, which.min)
 # sapply(rw_year_start, function(x) if(x==0){x=1})
@@ -215,6 +247,7 @@ saveRDS(list(N_trees = N_trees,
              N_species = N_species,
              N_cores = N_cores,
              N_dbh = N_dbh,
+             N_pith = N_pith, 
              y = y,
              logy = logy,
              rw_year_start = rw_year_start,
@@ -226,6 +259,11 @@ saveRDS(list(N_trees = N_trees,
              d2tree = d2tree,
              d2year = d2year,
              d2species = d2species,
+             pith_value = pith_value,
+             pith2tree = pith2tree,
+             pith2year = pith2year,
+             pithstemids = pith2stemids,
+             pith2species = pith2species,
              sig_d_obs = 0.02,
              species_ids = species_ids,
              years = years

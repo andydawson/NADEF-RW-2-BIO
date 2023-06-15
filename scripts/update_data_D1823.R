@@ -30,6 +30,8 @@ id_translate = read.csv('data/id_translate.csv', stringsAsFactors = FALSE)
 # read new dbh file
 dbh = read.csv('data/D1823/D1823_dbh.csv', stringsAsFactors = FALSE)
 
+# pith = read.csv('data/D1823/D1823_pith_update.csv')
+
 #######################################################################################################################################
 # Update meta: add additional DBH measurements for NADEF remeasured trees
 #######################################################################################################################################
@@ -78,6 +80,11 @@ meta_new = rbind(meta, dbh_meta)
 meta_new = meta_new %>% group_by(stem_id, year) %>% arrange(stem_id, year)
 
 meta_new = meta_new[which(!duplicated(meta_new)),]
+
+# meta_new$pith = NA
+# 
+# match(pith$stem_id, meta_new$stem_id)
+# match(meta_new$stem_id, pith$stem_id)
 
 write.csv(meta_new, 'data/D1823/D1823_meta_update.csv', row.names=FALSE)
 

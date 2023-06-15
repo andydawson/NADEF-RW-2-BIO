@@ -10,11 +10,13 @@ interval_cut = FALSE
 
 # model = 'species_time'
 # model = 'species_time_interval'
-model = 'species_time_negd'
+model = 'species_time_negd_pith'
+data_name = 'pith'
 
 if (update){
   # dat = readRDS('data/D1823/D1823_input_update.RDS')
-  dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
+  # dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
+  dat = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
   # post = readRDS('output/D1823_output_update.RDS')
   post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
@@ -83,7 +85,7 @@ if (interval_cut){
     year_end_tree = rw_year_end[i]
     
     if (year_start_tree != 1){
-    
+      
       # post$x[,i,1:(year_start_tree-1)] = NA
       # post$d_latent[,i,1:(year_start_tree-1)] = NA
       
@@ -139,27 +141,46 @@ for (i in 1:N_trees){
   
   year_start = rw_year_start[i]
   year_end = rw_year_end[i]
-
+  
   d_iter = d_latent[, i, ]
-
+  
   d_mean = apply(d_iter, 2, mean, na.rm=TRUE)
   d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
-
+  
   dbh_tree = data.frame(d_mean = d_mean, 
                         d_median = d_quant[,2], 
                         d_lo = d_quant[,1], 
                         d_hi = d_quant[,3], 
                         year = years)
-
+  
   idx_d_obs = which(d2tree == i)
-
+  
   dbh_obs = data.frame(d_obs = d[idx_d_obs],
                        year = years[d2year[idx_d_obs]])
-
+  
+  if (!is.na(N_pith)){
+    
+    if (any(pith2tree == i)) {
+      
+      pith_tree = TRUE
+      
+      idx_pith = which(pith2tree == i)
+      
+      pith_obs = data.frame(pith = 0,
+                            year = years[pith2year[idx_pith]])
+    } else {
+      
+      pith_tree = FALSE
+      
+      pith_obs = data.frame(pith = NA,
+                            year = years[N_years])
+    }
+  }
+  
   # Create a text
   grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.05,  y=0.9, hjust=0,
                             gp=gpar(col="black", fontsize=22)))
-
+  
   p <- ggplot() +
     # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
     geom_ribbon(data=dbh_tree, aes(x=year, ymin=d_lo, ymax=d_hi), fill='lightgrey') +
@@ -173,9 +194,14 @@ for (i in 1:N_trees){
     theme_bw(16)  +
     # ggtitle(paste0('Tree ', i)) +
     annotation_custom(grob)
-
+  
+  if (pith_tree){ 
+    p = p + geom_point(data=pith_obs, aes(x=year, y=pith), size=2, colour='dodgerblue')
+  }
+    
+  
   print(p)
-
+  
 }
 dev.off()
 #######################################################################################################################################
@@ -192,21 +218,21 @@ for (i in 1:N_trees){
   
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
-
+  
   x_iter = x[, i, ]
-
+  
   x_mean = apply(x_iter, 2, mean)
   x_quant = t(apply(x_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
-
+  
   rw_tree = data.frame(x_mean = x_mean, x_median = x_quant[,2], x_lo = x_quant[,1], x_hi = x_quant[,3], year = years)
-
+  
   rw_obs = data.frame(x_obs = as.vector(t(y[i,])),
-                       year = years)
-
+                      year = years)
+  
   # Create a text
   grob <- grobTree(textGrob(paste0('Tree ', i, '; Stem ID ', stem_id, '; Species ', species_id ), x=0.05,  y=0.9, hjust=0,
                             gp=gpar(col="black", fontsize=22)))
-
+  
   p <- ggplot() +
     # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
     geom_ribbon(data=rw_tree, aes(x=year, ymin=x_lo, ymax=x_hi), fill='lightgrey') +
@@ -220,9 +246,9 @@ for (i in 1:N_trees){
     theme_bw(16)  +
     # ggtitle(paste0('Tree ', i)) +
     annotation_custom(grob)
-
+  
   print(p)
-
+  
 }
 dev.off()
 
@@ -380,7 +406,7 @@ ggplot(data=beta_quant) +
   ylab('beta') +
   theme_bw(16) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) 
-  
+
 
 ggplot(data=beta_quant) +
   geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
