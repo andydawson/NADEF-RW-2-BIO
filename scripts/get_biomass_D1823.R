@@ -3,7 +3,7 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 # library(grid)
-
+rm(list = ls())
 coords = read.csv('data/maleki-2021/hectare_plots.csv')
 coords_D1823 = as.numeric(coords[which(coords$plot_id == 'H1823'), c('long', 'lat')])
 
@@ -11,15 +11,17 @@ coords_D1823 = as.numeric(coords[which(coords$plot_id == 'H1823'), c('long', 'la
 # 
 ############################################################################################
 
-update = TRUE
-interval_cut = TRUE
+update = TRUE # I guess we don't need to run the model with the original dataset
+interval_cut = TRUE #what is this?
 
-model = 'species_time'
+remove_deadtrees = TRUE
+
+model = 'species_time_negd_pith'
 # model = 'species_time_interval'
 
 if (update){
   # dat = readRDS('data/D1823/D1823_input_update.RDS')
-  dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
+  dat = readRDS('data/D1823/D1823_input_update_pith.RDS')
   # post = readRDS('output/D1823_output_update.RDS')
   post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
@@ -30,6 +32,8 @@ if (update){
 list2env(dat, envir = globalenv())
 list2env(post, envir = globalenv())
 
+###What is the interval_cut? I am not sure if this is still needed in the new version.
+###Should we delete this part?
 if (interval_cut){
   for (i in 1:N_trees){
     year_start_tree = rw_year_start[i]
@@ -65,16 +69,67 @@ x_post[,1,1]
 
 # x = apply(x_post, c(2,3), mean)
 
+#replace -999 with NA
 logy[logy==(-999)] = NA
 y[y==(-999)] = NA
 
 year_lo = min(years)
 year_hi = max(years)
-# species_table = data.frame(species_ids = species_ids,
-#                            genus = c('Thuja', 'Abies', 'Populus', 'Betula', 'Picea'),
-#                            species = c('occidentalis', 'balsamea', 'tremuloides', 'papyrifera', 'glauca'))
-species_table = read.csv('data/species_table.csv', stringsAsFactors = FALSE)
+species_table = data.frame(species_ids = species_ids,
+                            genus = c( 'Abies', 'Thuja', 'Populus', 'Betula', 'Picea', 'Picea'),
+                            species = c( 'balsamea', 'occidentalis', 'tremuloides', 'papyrifera', 'glauca', 'mariana'))
+####
+### where is this species table? I cannot find it in my folder
+####
+species_table = read.csv('Data/D1823/species_table.csv', stringsAsFactors = FALSE)
 
+
+# ############################################################################################
+# # non-negative dbh values and the random year of death for trees died since the 1994 census
+# ############################################################################################
+# keep only non-negative dbh values for each tree
+d_latent_pos = post$d_latent
+d_latent_pos[d_latent_pos <= 0] = NA
+
+if(remove_deadtrees){
+  d_latent_pos_living_trees = d_latent_pos
+  # a random process to determine the year of death 
+  meta_update = read.csv("data/D1823/D1823_meta_update.csv")
+  dead_trees = meta_update[grepl("M", meta_update$status_id, fixed = TRUE), ]
+  unique(dead_trees$year)
+  dead_trees = dead_trees %>% arrange(year)
+  dead_trees_first_year = dead_trees %>% group_by(stem_id) %>% slice(1)
+  dead_trees_first_year = as.data.frame(t(apply(dead_trees_first_year, 1, function(x){
+    yr1 = as.numeric(x[7])
+    if(yr1 == 2004){yr0 = 1994}
+    if(yr1 == 2011){yr0 = 2004}
+    if(yr1 == 2019){yr0 = 2011}
+    x_new = c(x[1:6], "year0" = yr0, x[7:11])
+    return(x_new)
+  })))
+  
+  #
+  for (tree in 1:N_trees){
+    print(tree)
+    stem_id = core2stemids[tree]
+    if(stem_id %in% dead_trees_first_year$stem_id){ #these trees are assumed to die between the start_death and the end_death
+      start_death =  1+as.numeric(dead_trees_first_year$year0[dead_trees_first_year$stem_id == stem_id]) 
+      end_death =  as.numeric(dead_trees_first_year$year[dead_trees_first_year$stem_id == stem_id]) 
+      
+      traj_tree = apply(d_latent_pos[ ,tree, ], 1, function(x){
+        death_yr_random = sample(seq(start_death, end_death, 1), 1)
+        x[which(years >=  death_yr_random)] <- NA
+        return(x)
+      })
+      
+      d_latent_pos_living_trees[ ,tree, ] = t(traj_tree)
+    }
+  }
+  saveRDS(d_latent_pos_living_trees, 'data/D1823/D1823_processed_living_dbh_trajectories.RDS')
+}
+
+d_latent_pos_living_trees = readRDS('data/D1823/D1823_processed_living_dbh_trajectories.RDS')
+#
 # ############################################################################################
 # # 
 # ############################################################################################
@@ -145,33 +200,62 @@ species_table = read.csv('data/species_table.csv', stringsAsFactors = FALSE)
 #   ylab('Biomass increment (kg)') +
 #   facet_wrap(~species_id)
 
-
 ############################################################################################
-# 
+# apply allometric equations for different species
 ############################################################################################
-N_trees = dim(d_latent)[2]
-N_iter  = dim(d_latent)[1]
-biomass_iter = array(NA, c(N_iter/2, N_trees, N_years))
-biomass_iter = array(NA, c(50, N_trees, N_years))
 
-for (iter in 1:50){#N_iter){
-  print(iter)
-  for (tree in 1:N_trees){
-    print(tree)
-    
-    # tree_genus   = species_table[d2species[tree],'genus']
-    # tree_species = species_table[d2species[tree],'species']
-    tree_genus   = species_table[core2species[tree],'genus']
-    tree_species = species_table[core2species[tree],'species']
-    
-    biomass_iter[iter, tree,] = get_biomass(dbh = d_latent[iter, tree,],
-                                       genus = tree_genus,
-                                       species = tree_species,
-                                       coords = coords_D1823)
+# verify if the allodb package directly uses the equation parameters returned from the est_params() function
+# Must run these codes as the 'equation_biomass' will be used
+curve_biomass = data.frame(matrix(nrow = 21*6, ncol = 4))
+colnames(curve_biomass) = c('species_id', 'dbh', 'biomass', "equation_est")
+curve_biomass$species_id = rep(unique(species_table$species_ids), each = 21)
+curve_biomass$dbh = rep(seq(0,100,5), 6)
+
+equation_biomass <- data.frame(matrix(ncol = 7))
+
+for(i in 1:nrow(species_table)){
+  speices_id = species_table$species_ids[i]
+  genus_i = species_table$genus[i]
+  species_i = species_table$species[i]
+  equation_biomass[i,] <- est_params(
+    genus = genus_i,
+    species = species_i,
+    coords = coords_D1823
+  )
+  
+  for (j in 1:21) {
+    curve_biomass[21*(i-1)+j,3] <- get_biomass(dbh = curve_biomass[21*(i-1)+j,2] ,
+                                              genus = genus_i,
+                                              species = species_i,
+                                              coords = coords_D1823)
+    curve_biomass[21*(i-1)+j,4] <- equation_biomass[i,5]*curve_biomass[21*(i-1)+j,2]^equation_biomass[i,6]
   }
 }
 
-biomass_iter
+#the graph shows that the allodb package directly uses these equation parameters 
+ggplot(curve_biomass)+
+  geom_point(aes(x = dbh, y = biomass, col = species_id))+
+  geom_line(aes(x = dbh, y = equation_est, col = species_id))+
+  theme_bw()
+
+# apply the equation parameters, rather than the get_biomass() function, to convert dbh to biomass
+N_iter  = dim(d_latent_pos_living_trees)[1]
+biomass_iter = array(NA, c(N_iter, N_trees, N_years))
+
+for (tree in 1:N_trees){
+  #tree = 1
+  print(tree)
+  species_id = species_ids[core2species[tree]]
+  
+  genus = species_table[species_table$species_ids == species_id, 'genus']
+  species = species_table[species_table$species_ids == species_id, 'species']
+  equation = equation_biomass[equation_biomass$X1 == genus&equation_biomass$X2 == species,]
+  if(remove_deadtrees){
+    biomass_iter[,tree,] = equation[,5]*d_latent_pos_living_trees[,tree,]^equation[,6]
+  }else{
+    biomass_iter[,tree,] = equation[,5]*d_latent_pos[,tree,]^equation[,6]
+  }
+}
 
 ############################################################################################
 # 
@@ -222,20 +306,20 @@ p <- ggplot() +
   theme_bw(14) +
   xlab('year') +
   ylab('biomass (kg)') +
-  facet_wrap(~species_id)
+  facet_wrap(~species_id, scales = 'free_y')
 print(p)
 dev.off()
 
 agb_species = agb_melt %>% 
   group_by(year, iter, species_id) %>%
-  summarize(agb = sum(agb), .groups="keep")
+  summarize(agb = sum(agb, na.rm = TRUE), .groups="keep")
 
 agb_quants_species = agb_species %>% 
   dplyr::group_by(year, species_id) %>%
-  dplyr::summarize(agb_mean = mean(agb), 
-                   agb_median = median(agb), 
-                   agb_lo = quantile(agb, c(0.025)),
-                   agb_hi = quantile(agb, c(0.975)), .groups="keep")
+  dplyr::summarize(agb_mean = mean(agb, na.rm = TRUE), 
+                   agb_median = median(agb, na.rm = TRUE), 
+                   agb_lo = quantile(agb, c(0.025), na.rm = TRUE),
+                   agb_hi = quantile(agb, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
 pdf('figures/agb_vs_year_by_species_update.pdf', width=10, height=6)
@@ -262,16 +346,15 @@ ggplot() +
 
 agb_all = agb_melt %>% 
   group_by(year, iter) %>%
-  summarize(agb = sum(agb), .groups="keep")
+  summarize(agb = sum(agb, na.rm = TRUE), .groups="keep")
 
 agb_quants_all = agb_all %>% 
   dplyr::group_by(year) %>%
-  dplyr::summarize(bio_mean = mean(agb), 
-                   bio_median = median(agb), 
-                   bio_lo = quantile(agb, c(0.025)),
-                   bio_hi = quantile(agb, c(0.975)), .groups="keep")
+  dplyr::summarize(bio_mean = mean(agb, na.rm = TRUE), 
+                   bio_median = median(agb, na.rm = TRUE), 
+                   bio_lo = quantile(agb, c(0.025), na.rm = TRUE),
+                   bio_hi = quantile(agb, c(0.975), na.rm = TRUE), .groups="keep")
 
-  
 ggplot() +
   geom_ribbon(data=agb_quants_all, aes(x=year, ymin=bio_lo, ymax=bio_hi), fill='lightgrey') +
   geom_line(data=agb_quants_all, aes(x=year, y=bio_median)) +
@@ -290,10 +373,10 @@ agbi_melt =  agb_melt %>%
 agbi_melt = agbi_melt[which(!is.na(agbi_melt$agbi)),]
 agbi_quants = agbi_melt %>% 
   dplyr::group_by(stat_id, year, species_id) %>%
-  dplyr::summarize(agbi_mean = mean(agbi), 
-                   agbi_median = median(agbi), 
-                   agbi_lo = quantile(agbi, c(0.025)),
-                   agbi_hi = quantile(agbi, c(0.975)), .groups="keep")
+  dplyr::summarize(agbi_mean = mean(agbi, na.rm = TRUE), 
+                   agbi_median = median(agbi, na.rm = TRUE), 
+                   agbi_lo = quantile(agbi, c(0.025), na.rm = TRUE),
+                   agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 
 ggplot() +
@@ -313,14 +396,14 @@ ggplot() +
 
 agbi_species = agbi_melt %>% 
   group_by(year, iter, species_id) %>%
-  summarize(agbi = sum(agbi), .groups="keep")
+  summarize(agbi = sum(agbi, na.rm = TRUE), .groups="keep")
 
 agbi_quants_species = agbi_species %>% 
   dplyr::group_by(year, species_id) %>%
-  dplyr::summarize(agbi_mean = mean(agbi), 
-                   agbi_median = median(agbi), 
-                   agbi_lo = quantile(agbi, c(0.025)),
-                   agbi_hi = quantile(agbi, c(0.975)), .groups="keep")
+  dplyr::summarize(agbi_mean = mean(agbi, na.rm = TRUE), 
+                   agbi_median = median(agbi, na.rm = TRUE), 
+                   agbi_lo = quantile(agbi, c(0.025), na.rm = TRUE),
+                   agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
   pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
@@ -368,14 +451,14 @@ dev.off()
 
 agbi_all = agbi_melt %>% 
   group_by(year, iter) %>%
-  summarize(agbi = sum(agbi), .groups="keep")
+  summarize(agbi = sum(agbi, na.rm = TRUE), .groups="keep")
 
 agbi_quants_all = agbi_all %>% 
   dplyr::group_by(year) %>%
-  dplyr::summarize(agbi_mean = mean(agbi), 
-                   agbi_median = median(agbi), 
-                   agbi_lo = quantile(agbi, c(0.025)),
-                   agbi_hi = quantile(agbi, c(0.975)), .groups="keep")
+  dplyr::summarize(agbi_mean = mean(agbi, na.rm = TRUE), 
+                   agbi_median = median(agbi, na.rm = TRUE), 
+                   agbi_lo = quantile(agbi, c(0.025), na.rm = TRUE),
+                   agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
 pdf('figures/agbi_vs_year_overall_update.pdf', width=10, height=6)
