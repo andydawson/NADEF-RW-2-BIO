@@ -5,7 +5,7 @@ library(ggplot2)
 # for original data: update = FALSE
 # for updated data: update = TRUE
 update = TRUE
-data_name = 'pith'
+data_name = 'pith_status'
 
 # meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 # rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
@@ -45,6 +45,7 @@ meta$status_id = tolower(meta$status_id)
 length(which((meta$status_id %in% c('md', 'mc'))))
 
 meta = meta[which(!(meta$status_id %in% c('md', 'mc'))),]
+meta$status_id[which(meta$status_id == 'v')] = 'vd'
 
 # hi = 100
 # lo = 0
@@ -78,6 +79,12 @@ N_trees = length(stem_ids)
 species_ids = unique(meta_sub$species_id)
 N_species = length(species_ids)
 
+status_codes = unique(meta_sub$status_id)
+status_translate = data.frame(french = c('vd', 'vp', 'vcas', 'vc'), 
+                              english = c('standing', 'leaning', 'broken', 'lying'))
+status_codes_EN = status_translate$english[match(status_codes, status_translate$french)]
+N_status = length(status_codes)
+
 stat_ids = seq(1, N_trees)
 meta_sub$stat_id = match(meta_sub$stem_id, stem_ids)
 meta_sub$species_code = match(meta_sub$species_id, species_ids)
@@ -107,6 +114,7 @@ d = meta_sub$dbh
 d2tree = stat_ids[match(meta_sub$stem_id, stem_ids)]
 d2year = match(meta_sub$year, years)
 d2species = meta_sub$species_code
+d2status = match(meta_sub$status_id, status_codes)
 N_dbh = length(d)
 
 rw_stat_id = stat_ids[match(rw_sub$stem_id, stem_ids)]
@@ -200,7 +208,14 @@ pith2year = pith$pith_year
 
 pith2species = meta_sub$species_code[match(pith2tree, meta_sub$stat_id)]
 
+
+
 N_pith = nrow(pith)
+
+pith2type = rep(NA, N_pith)
+pith2type[!is.na(pith$pith)] = 1
+pith2type[!is.na(pith$estimate_pith)] = 2
+
 pith_value = rep(0, N_pith)
 
 # rw_year_start = apply(logy, 1, which.min)
@@ -248,6 +263,7 @@ saveRDS(list(N_trees = N_trees,
              N_cores = N_cores,
              N_dbh = N_dbh,
              N_pith = N_pith, 
+             N_status = N_status,
              y = y,
              logy = logy,
              rw_year_start = rw_year_start,
@@ -259,14 +275,17 @@ saveRDS(list(N_trees = N_trees,
              d2tree = d2tree,
              d2year = d2year,
              d2species = d2species,
+             d2status = d2status,
              pith_value = pith_value,
              pith2tree = pith2tree,
              pith2year = pith2year,
-             pithstemids = pith2stemids,
+             pith2stemids = pith2stemids,
              pith2species = pith2species,
-             sig_d_obs = 0.02,
+             pith2type = pith2type,
+             sig_d_obs = c(0.02, 1, 0.02, 1),
              species_ids = species_ids,
-             years = years
+             years = years,
+             status_codes = status_codes_EN
 ),
 file=fname)
 

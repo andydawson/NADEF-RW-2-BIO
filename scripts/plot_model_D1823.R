@@ -11,7 +11,10 @@ interval_cut = FALSE
 # model = 'species_time'
 # model = 'species_time_interval'
 model = 'species_time_negd_pith'
+model = 'species_time_negd_2pith'
+model = 'species_time_negd_2pith_status'
 data_name = 'pith'
+data_name = 'pith_status'
 
 if (update){
   # dat = readRDS('data/D1823/D1823_input_update.RDS')
@@ -26,6 +29,8 @@ if (update){
 
 list2env(dat, envir = globalenv())
 list2env(post, envir = globalenv())
+
+status_codes = factor(status_codes)
 
 #create dataframe of min, mean, and median, years when dbh went positive
 d_min = apply(post$d_latent, c(2,3), min)
@@ -156,7 +161,8 @@ for (i in 1:N_trees){
   idx_d_obs = which(d2tree == i)
   
   dbh_obs = data.frame(d_obs = d[idx_d_obs],
-                       year = years[d2year[idx_d_obs]])
+                       year = years[d2year[idx_d_obs]],
+                       status = status_codes[d2status[idx_d_obs]])
   
   if (!is.na(N_pith)){
     
@@ -185,7 +191,7 @@ for (i in 1:N_trees){
     # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
     geom_ribbon(data=dbh_tree, aes(x=year, ymin=d_lo, ymax=d_hi), fill='lightgrey') +
     geom_line(data=dbh_tree, aes(x=year, y=d_median)) +
-    geom_point(data=dbh_obs, aes(x=year, y=d_obs), size=2) +
+    geom_point(data=dbh_obs, aes(x=year, y=d_obs, colour=status), size=2, drop=FALSE) +
     # geom_dog(data=dbh_obs, aes(x=year, y=d_obs, dog='glasses'), size=2) +
     # ylim(c(0,500)) +
     xlab('year') +
@@ -215,6 +221,8 @@ if (update) {
   pdf(paste0('figures/rw_vs_year_estimated_', model, '.pdf'), width=10, height=6)
 }
 for (i in 1:N_trees){
+  
+  print(i)
   
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
@@ -305,25 +313,25 @@ ggplot(data=beta_t_quant) +
   theme_bw(16) +
   facet_grid(species_id~.)
 if (update) {
-  ggsave('figures/time_species_effect_estimated_update.pdf')
+  ggsave(paste0('figures/time_species_effect_estimated_update', model, '.pdf'))
 } else {
-  ggsave('figures/time_species_effect_estimated.pdf')
+  ggsave(paste0('figures/time_species_effect_estimated', model, '.pdf'))
 }
 
-ggplot(data=beta_t_quant) +
-  geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
-  geom_point(aes(x=year, y=mid)) + 
-  geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
-  xlab('year') +
-  ylab('beta_t') +
-  xlim(c(year_lo, year_hi)) +
-  theme_bw(16) +
-  facet_grid(species_id~.) 
-if (update) {
-  ggsave('figures/time_species_effect_estimated_update.pdf', width=10, height=8)
-} else {
-  ggsave('figures/time_species_effect_estimated.pdf', width=10, height=8)
-}
+# ggplot(data=beta_t_quant) +
+#   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+#   geom_point(aes(x=year, y=mid)) + 
+#   geom_linerange(aes(x=year, ymin=lo, ymax=hi)) +
+#   xlab('year') +
+#   ylab('beta_t') +
+#   xlim(c(year_lo, year_hi)) +
+#   theme_bw(16) +
+#   facet_grid(species_id~.) 
+# if (update) {
+#   ggsave('figures/time_species_effect_estimated_update.pdf', width=10, height=8)
+# } else {
+#   ggsave('figures/time_species_effect_estimated.pdf', width=10, height=8)
+# }
 
 # #######################################################################################################################################
 # # plot time effects
@@ -395,27 +403,8 @@ beta_quant$species = species_ids[core2species[beta_quant$tree]]
 #   ylab('beta') +
 #   theme_bw(16)
 
-# beta_quant = beta_quant[order(beta_quant$species),]
-# beta_quant$species = factor(beta_quant$species)
-
-ggplot(data=beta_quant) +
-  geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
-  geom_point(aes(x=tree, y=mid, colour=species)) + 
-  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
-  xlab('tree') +
-  ylab('beta') +
-  theme_bw(16) +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) 
-
-
-ggplot(data=beta_quant) +
-  geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
-  geom_point(aes(x=tree, y=mid, colour=species)) + 
-  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
-  xlab('tree') +
-  ylab('beta') +
-  theme_bw(16) +
-  coord_flip()
+beta_quant = beta_quant[order(beta_quant$species),]
+beta_quant$species = factor(beta_quant$species)
 
 # # beta_quant$tree = factor(beta_quant$tree)
 beta_quant = beta_quant %>% group_by(species) %>% arrange(mid, .by_group = TRUE)
@@ -423,14 +412,34 @@ beta_quant$tree = factor(beta_quant$tree, levels = beta_quant$tree)
 
 ggplot(data=beta_quant) +
   geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
-  geom_point(aes(x=tree, y=mid, colour=species)) + 
-  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
+  geom_point(aes(x=tree, y=mid, colour=species, group=species), alpha=0.6) + 
+  geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species, group=species), alpha=0.6) +
   xlab('tree') +
   ylab('beta') +
   theme_bw(16) +
-  theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank()) +
-  facet_wrap(~species, scales="free_x")
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) 
+
+
+# ggplot(data=beta_quant) +
+#   geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
+#   geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species), alpha=0.6) +
+#   geom_point(aes(x=tree, y=mid, colour=species), alpha=0.6) + 
+#   xlab('tree') +
+#   ylab('beta') +
+#   theme_bw(16) +
+#   coord_flip()
+
+# ggplot(data=beta_quant) +
+#   geom_hline(aes(yintercept=beta0_quant$mid), lty=2, lwd=1.2) +
+#   geom_point(aes(x=tree, y=mid, colour=species)) + 
+#   geom_linerange(aes(x=tree, ymin=lo, ymax=hi, colour=species)) +
+#   xlab('tree') +
+#   ylab('beta') +
+#   theme_bw(16) +
+#   theme(axis.text.x = element_blank(), 
+#         axis.ticks.x = element_blank()) +
+#   facet_wrap(~species)
+#   facet_wrap(~species, scales="free_x")
 
 
 # ggplot(data=beta_quant) +

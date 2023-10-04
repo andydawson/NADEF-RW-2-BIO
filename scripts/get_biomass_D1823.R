@@ -12,16 +12,18 @@ coords_D1823 = as.numeric(coords[which(coords$plot_id == 'H1823'), c('long', 'la
 ############################################################################################
 
 update = TRUE # I guess we don't need to run the model with the original dataset
-interval_cut = TRUE #what is this?
+interval_cut = FALSE #what is this?
 
 remove_deadtrees = TRUE
 
-model = 'species_time_negd_pith'
+model = 'species_time_negd_2pith_status'
 # model = 'species_time_interval'
+data_name = 'pith_status'
 
 if (update){
   # dat = readRDS('data/D1823/D1823_input_update.RDS')
-  dat = readRDS('data/D1823/D1823_input_update_pith.RDS')
+  # dat = readRDS('data/D1823/D1823_input_update_pith.RDS')
+  dat = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
   # post = readRDS('output/D1823_output_update.RDS')
   post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
 } else {
@@ -31,6 +33,9 @@ if (update){
 
 list2env(dat, envir = globalenv())
 list2env(post, envir = globalenv())
+
+
+year_idx = seq(1, N_years)
 
 ###What is the interval_cut? I am not sure if this is still needed in the new version.
 ###Should we delete this part?
@@ -49,7 +54,7 @@ if (interval_cut){
       
     }
     
-    if (year_end_tree != max(years_idx)){
+    if (year_end_tree != max(year_idx)){
       
       # post$x[,i,(year_end_tree+1):N_years] = NA
       # post$d_latent[,i,(year_end_tree+1):N_years] = NA 
@@ -63,6 +68,8 @@ if (interval_cut){
 
 names(post)
 dim(post$x)
+
+N_iter = dim(post$x)[1]
 
 x_post = post$x
 x_post[,1,1]
@@ -81,7 +88,7 @@ species_table = data.frame(species_ids = species_ids,
 ####
 ### where is this species table? I cannot find it in my folder
 ####
-species_table = read.csv('Data/D1823/species_table.csv', stringsAsFactors = FALSE)
+species_table = read.csv('data/species_table.csv', stringsAsFactors = FALSE)
 
 
 # ############################################################################################
@@ -129,42 +136,62 @@ if(remove_deadtrees){
 }
 
 d_latent_pos_living_trees = readRDS('data/D1823/D1823_processed_living_dbh_trajectories.RDS')
-#
-# ############################################################################################
-# # 
-# ############################################################################################
-# 
+
+d_post = d_latent_pos_living_trees
+
+############################################################################################
+# using get_biomass function
+############################################################################################
+
 # ## example
 # bio_test = get_biomass(dbh = c(20, 24, 27),
 #                        genus = 'Picea',
 #                        species = 'glauca',
 #                        coords = coords_D1823)
-# 
-# ## example
-# biomass = array(NA, c(N_trees, N_years))
-# 
-# for (tree in 1:N_trees){
-#   
-#   tree_genus   = species_table[core2species[tree],'genus']
-#   tree_species = species_table[core2species[tree],'species']
-#   
-#   biomass[tree,] = get_biomass(dbh = d_post_mean[tree,],
-#                                genus = tree_genus,
-#                                species = tree_species,
-#                                coords = coords_D1823)
-# }
-# 
-# ############################################################################################
-# # 
-# ############################################################################################
-# 
-# bio_df = data.frame(stat_id = core2tree, 
-#                     species_id = species_ids[core2species], 
-#                     biomass)
-# 
-# bio_melt = melt(bio_df, id.vars = c('stat_id', 'species_id'))
-# bio_melt$year = years[as.numeric(substr(bio_melt$variable, 2, 5))]
-# 
+
+## example
+biomass_iter = array(NA, c(N_iter, N_trees, N_years))
+biomass_iter = array(NA, c(50, N_trees, N_years))
+
+for (tree in 1:N_trees){
+  
+  print(paste0("tree: ", tree))
+  
+  for (iter in 1:50){#N_iter){
+    
+    # print(paste0("tree: ", tree, "; iter: ", iter))
+    
+    tree_genus   = species_table[core2species[tree],'genus']
+    tree_species = species_table[core2species[tree],'species']
+    
+    biomass_iter[iter, tree,] = get_biomass(dbh = d_post[iter, tree,],
+                                 genus = tree_genus,
+                                 species = tree_species,
+                                 coords = coords_D1823)
+    
+    foo = get_biomass(dbh = d_post[iter, tree,],
+                                            genus = tree_genus,
+                                            species = tree_species,
+                                            coords = coords_D1823)
+    
+    # print(all(diff(foo)>0, na.rm = TRUE))
+  }
+}
+
+
+agb_melt = melt(biomass_iter)
+
+colnames(agb_melt) = c('iter', 'stat_id', 'year_idx', 'agb')
+
+############################################################################################
+#
+############################################################################################
+
+agb_melt = data.frame(species_id = species_ids[core2species[agb_melt$stat_id]],
+                      agb_melt)
+
+agb_melt$year = years[agb_melt$year_idx]
+
 # ggplot() +
 #   geom_line(data=bio_melt, aes(x=year, y=value, colour=stat_id, group=stat_id)) +
 #   theme_bw(14) +
@@ -177,12 +204,12 @@ d_latent_pos_living_trees = readRDS('data/D1823/D1823_processed_living_dbh_traje
 #   xlab('year') +
 #   ylab('Biomass (kg)') +
 #   facet_wrap(~species_id)
-#             
-# ############################################################################################
-# # calculate biomass increment
-# ############################################################################################
-# 
-# agbi_melt =  bio_melt %>% 
+
+############################################################################################
+# calculate biomass increment
+############################################################################################
+
+# agbi_melt =  bio_melt %>%
 #   group_by(stat_id, species_id) %>%
 #   arrange(year, .by_group=TRUE) %>%
 #   mutate(agbi = value - lag(value))
@@ -200,62 +227,62 @@ d_latent_pos_living_trees = readRDS('data/D1823/D1823_processed_living_dbh_traje
 #   ylab('Biomass increment (kg)') +
 #   facet_wrap(~species_id)
 
-############################################################################################
-# apply allometric equations for different species
-############################################################################################
-
-# verify if the allodb package directly uses the equation parameters returned from the est_params() function
-# Must run these codes as the 'equation_biomass' will be used
-curve_biomass = data.frame(matrix(nrow = 21*6, ncol = 4))
-colnames(curve_biomass) = c('species_id', 'dbh', 'biomass', "equation_est")
-curve_biomass$species_id = rep(unique(species_table$species_ids), each = 21)
-curve_biomass$dbh = rep(seq(0,100,5), 6)
-
-equation_biomass <- data.frame(matrix(ncol = 7))
-
-for(i in 1:nrow(species_table)){
-  speices_id = species_table$species_ids[i]
-  genus_i = species_table$genus[i]
-  species_i = species_table$species[i]
-  equation_biomass[i,] <- est_params(
-    genus = genus_i,
-    species = species_i,
-    coords = coords_D1823
-  )
-  
-  for (j in 1:21) {
-    curve_biomass[21*(i-1)+j,3] <- get_biomass(dbh = curve_biomass[21*(i-1)+j,2] ,
-                                              genus = genus_i,
-                                              species = species_i,
-                                              coords = coords_D1823)
-    curve_biomass[21*(i-1)+j,4] <- equation_biomass[i,5]*curve_biomass[21*(i-1)+j,2]^equation_biomass[i,6]
-  }
-}
-
-#the graph shows that the allodb package directly uses these equation parameters 
-ggplot(curve_biomass)+
-  geom_point(aes(x = dbh, y = biomass, col = species_id))+
-  geom_line(aes(x = dbh, y = equation_est, col = species_id))+
-  theme_bw()
-
-# apply the equation parameters, rather than the get_biomass() function, to convert dbh to biomass
-N_iter  = dim(d_latent_pos_living_trees)[1]
-biomass_iter = array(NA, c(N_iter, N_trees, N_years))
-
-for (tree in 1:N_trees){
-  #tree = 1
-  print(tree)
-  species_id = species_ids[core2species[tree]]
-  
-  genus = species_table[species_table$species_ids == species_id, 'genus']
-  species = species_table[species_table$species_ids == species_id, 'species']
-  equation = equation_biomass[equation_biomass$X1 == genus&equation_biomass$X2 == species,]
-  if(remove_deadtrees){
-    biomass_iter[,tree,] = equation[,5]*d_latent_pos_living_trees[,tree,]^equation[,6]
-  }else{
-    biomass_iter[,tree,] = equation[,5]*d_latent_pos[,tree,]^equation[,6]
-  }
-}
+# ############################################################################################
+# # apply allometric equations for different species
+# ############################################################################################
+# 
+# # verify if the allodb package directly uses the equation parameters returned from the est_params() function
+# # Must run these codes as the 'equation_biomass' will be used
+# curve_biomass = data.frame(matrix(nrow = 21*6, ncol = 4))
+# colnames(curve_biomass) = c('species_id', 'dbh', 'biomass', "equation_est")
+# curve_biomass$species_id = rep(unique(species_table$species_ids), each = 21)
+# curve_biomass$dbh = rep(seq(0,100,5), 6)
+# 
+# equation_biomass <- data.frame(matrix(ncol = 7))
+# 
+# for(i in 1:nrow(species_table)){
+#   speices_id = species_table$species_ids[i]
+#   genus_i = species_table$genus[i]
+#   species_i = species_table$species[i]
+#   equation_biomass[i,] <- est_params(
+#     genus = genus_i,
+#     species = species_i,
+#     coords = coords_D1823
+#   )
+#   
+#   for (j in 1:21) {
+#     curve_biomass[21*(i-1)+j,3] <- get_biomass(dbh = curve_biomass[21*(i-1)+j,2] ,
+#                                               genus = genus_i,
+#                                               species = species_i,
+#                                               coords = coords_D1823)
+#     curve_biomass[21*(i-1)+j,4] <- equation_biomass[i,5]*curve_biomass[21*(i-1)+j,2]^equation_biomass[i,6]
+#   }
+# }
+# 
+# #the graph shows that the allodb package directly uses these equation parameters 
+# ggplot(curve_biomass)+
+#   geom_point(aes(x = dbh, y = biomass, col = species_id))+
+#   geom_line(aes(x = dbh, y = equation_est, col = species_id))+
+#   theme_bw()
+# 
+# # apply the equation parameters, rather than the get_biomass() function, to convert dbh to biomass
+# N_iter  = dim(d_latent_pos_living_trees)[1]
+# biomass_iter = array(NA, c(N_iter, N_trees, N_years))
+# 
+# for (tree in 1:N_trees){
+#   #tree = 1
+#   print(tree)
+#   species_id = species_ids[core2species[tree]]
+#   
+#   genus = species_table[species_table$species_ids == species_id, 'genus']
+#   species = species_table[species_table$species_ids == species_id, 'species']
+#   equation = equation_biomass[equation_biomass$X1 == genus&equation_biomass$X2 == species,]
+#   if(remove_deadtrees){
+#     biomass_iter[,tree,] = equation[,5]*d_latent_pos_living_trees[,tree,]^equation[,6]
+#   }else{
+#     biomass_iter[,tree,] = equation[,5]*d_latent_pos[,tree,]^equation[,6]
+#   }
+# }
 
 ############################################################################################
 # 
@@ -265,10 +292,10 @@ for (tree in 1:N_trees){
 #                     species_id = species_ids[core2species], 
 #                     biomass)
 
-agb_melt = melt(biomass_iter)#, id.vars = c('stat_id', 'species_id'))
-colnames(agb_melt) = c('iter', 'stat_id', 'year', 'agb')
-agb_melt$year = years[agb_melt$year]
-agb_melt$species_id = species_ids[core2species[agb_melt$stat_id]]
+# agb_melt = melt(biomass_iter)#, id.vars = c('stat_id', 'species_id'))
+# colnames(agb_melt) = c('iter', 'stat_id', 'year', 'agb')
+# agb_melt$year = years[agb_melt$year]
+# agb_melt$species_id = species_ids[core2species[agb_melt$stat_id]]
 
 # bio_mean = apply(biomass_iter, c(1,2), mean)
 # bio_quant = t(apply(biomass_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))))
@@ -278,14 +305,35 @@ agb_melt$species_id = species_ids[core2species[agb_melt$stat_id]]
 #                       bio_lo = bio_quant[,1], 
 #                       bio_hi = bio_quant[,3], 
 #                       year = years)
-library(dplyr)
+
 agb_quants = agb_melt %>% 
   dplyr::group_by(stat_id, year, species_id) %>%
   dplyr::summarize(agb_mean = mean(agb, na.rm=TRUE), 
             agb_median = median(agb, na.rm=TRUE), 
             agb_lo = quantile(agb, c(0.025), na.rm=TRUE),
-            agb_hi = quantile(agb, c(0.975), na.rm=TRUE), .groups="keep")
+            agb_hi = quantile(agb, c(0.975), na.rm=TRUE), 
+            .groups="keep")
 
+
+# > unique(agb_melt[which(agb_melt$species_id == 'BPA'), 'stat_id'])
+# [1]   65   84   88  100  275  291  390  392  398  399  409  410  447  527  554  629
+# [17]  635  651  699  701  755  762  804  848  852  873  876  878  886  949  952  979
+# [33]  994 1014 1015 1016 1017 1019 1024 1054 1070 1071 1072 1103 1106 1112 1114 1133
+# [49] 1135 1142 1149 1160
+bpa_stat_id = unique(agb_melt[which(agb_melt$species_id == 'BPA'), 'stat_id'])
+for (i in 1:length(bpa_stat_id)){
+  id = bpa_stat_id[i]
+  print(id)
+  
+  agb_sub = agb_quants[which(agb_quants$stat_id == id),]
+  
+  p = ggplot(data=agb_sub) +
+    geom_line(aes(x=year, y=agb_median)) +
+    ggtitle(id)
+  print(p)
+  
+}
+# agb_quants[which(agb_quants$stat_id %in% bpa_stat_id),]
 
 ggplot() +
   geom_ribbon(data=agb_quants, aes(x=year, ymin=agb_lo, ymax=agb_hi, group=stat_id), fill='lightgrey') +
