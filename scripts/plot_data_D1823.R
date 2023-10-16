@@ -40,4 +40,19 @@ meta_update[which(meta_update$stem_id=='T60'),]
 
 
 
+dbh = read.csv('data/D1823/D1823_dbh.csv')
+dbh$sd = apply(dbh[,3:7], 1, sd)
+dbh$mean = apply(dbh[,3:7], 1, mean)
 
+ggplot(data=dbh) +
+  geom_point(aes(x=mean, y=sd), size=3) +
+  theme_bw(16) +
+  xlab('Mean DBH (cm)') +
+  ylab('Standard deviation DBH (cm)') +
+  ylim(c(0, 1.2))
+# ggsave('')
+
+foo = melt(dbh, id.vars = c('stem_id', 'species_code'))
+
+ggplot(data=foo) +
+  geom_point(aes(x=stem_id, y=value))

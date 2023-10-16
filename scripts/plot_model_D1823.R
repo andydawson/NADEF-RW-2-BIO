@@ -210,6 +210,94 @@ for (i in 1:N_trees){
   
 }
 dev.off()
+
+
+
+# which(!is.na(y[,122]))
+
+# create data frame of DBH model and data values
+dbh_validate = data.frame(year = numeric(0),
+                          d_model_mean = numeric(0),
+                          d_model_median = numeric(0),
+                          d_model_lo = numeric(0),
+                          d_model_hi = numeric(0),
+                          d_obs = numeric(0),
+                          status = character(0),
+                          species_id = character(0))
+for (i in 1:N_trees){
+  
+  print(i)
+  
+  stem_id = core2stemids[i]
+  species_id = species_ids[core2species[i]]
+  
+  year_start = rw_year_start[i]
+  year_end = rw_year_end[i]
+  
+  idx_d_obs = which(d2tree == i)
+  
+  dbh_obs = data.frame(d_obs = d[idx_d_obs],
+                       year = years[d2year[idx_d_obs]],
+                       status = status_codes[d2status[idx_d_obs]], 
+                       species_id = rep(species_id))
+  
+  # d_obs = d[idx_d_obs]
+  # years_obs = years[d2year[idx_d_obs]]
+  # status_obs = status_codes[d2status[idx_d_obs]]
+  
+  d_iter = d_latent[, i, ]
+  
+  d_mean = apply(d_iter, 2, mean, na.rm=TRUE)
+  d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
+  
+  dbh_model = data.frame(d_model_mean = d_mean, 
+                        d_model_median = d_quant[,2], 
+                        d_model_lo = d_quant[,1], 
+                        d_model_hi = d_quant[,3], 
+                        year = years)
+  dbh_model = subset(dbh_model, year %in% dbh_obs$year)
+  
+  dbh_validate = rbind(dbh_validate,
+                       merge(dbh_model, dbh_obs))
+  
+  # if (!is.na(N_pith)){
+  #   
+  #   if (any(pith2tree == i)) {
+  #     
+  #     pith_tree = TRUE
+  #     
+  #     idx_pith = which(pith2tree == i)
+  #     
+  #     pith_obs = data.frame(pith = 0,
+  #                           year = years[pith2year[idx_pith]])
+  #   } else {
+  #     
+  #     pith_tree = FALSE
+  #     
+  #     pith_obs = data.frame(pith = NA,
+  #                           year = years[N_years])
+  #   }
+  # }
+}
+
+pdf(paste0('figures/dbh_model_vs_data_scatter_update_', model, '.pdf'), width=10, height=6)
+p <- ggplot(data=dbh_validate) +
+  geom_abline(intercept=0, slope=1, lty=2, colour='red') +
+  geom_smooth(method='lm', aes(x=d_obs, y=d_model_median), fullrange=TRUE) +
+  # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
+  geom_linerange(aes(x=d_obs, ymin=d_model_lo, ymax=d_model_hi), colour='black', alpha=0.3) +
+  geom_point(aes(x=d_obs, y=d_model_median), colour='black', size=2, alpha=0.3) +
+  # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
+  # ylim(c(0,500)) +
+  xlab('dbh obs (cm)') +
+  ylab('dbh model (cm)') +
+  theme_bw(16)  + 
+  coord_fixed() +
+  xlim(c(0, 60)) +
+  ylim(c(0, 60)) 
+print(p)
+dev.off()
+
 #######################################################################################################################################
 #
 #######################################################################################################################################
@@ -258,6 +346,82 @@ for (i in 1:N_trees){
   print(p)
   
 }
+dev.off()
+
+
+# create data frame of DBH model and data values
+rw_validate = data.frame(year = numeric(0),
+                          rw_model_mean = numeric(0),
+                          rw_model_median = numeric(0),
+                          rw_model_lo = numeric(0),
+                          rw_model_hi = numeric(0),
+                          rw_obs = numeric(0),
+                          species_id = character(0))
+for (i in 1:N_trees){
+  
+  print(i)
+  
+  stem_id = core2stemids[i]
+  species_id = species_ids[core2species[i]]
+  
+  rw_obs = data.frame(rw_obs = as.vector(t(y[i,])),
+                      year = years)
+  rw_obs = subset(rw_obs, !is.na(rw_obs))
+  
+  if (all(is.na(rw_obs$rw_obs))){
+    next
+  }
+  
+  x_iter = x[, i, ]
+  
+  x_mean = apply(x_iter, 2, mean)
+  x_quant = t(apply(x_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
+  
+  rw_model = data.frame(rw_model_mean = x_mean, 
+                         rw_model_median = x_quant[,2], 
+                         rw_model_lo = x_quant[,1], 
+                         rw_model_hi = x_quant[,3], 
+                         year = years)
+  rw_model = subset(rw_model, year %in% rw_obs$year)
+  
+  rw_validate = rbind(rw_validate,
+                       merge(rw_model, rw_obs))
+  
+  # if (!is.na(N_pith)){
+  #   
+  #   if (any(pith2tree == i)) {
+  #     
+  #     pith_tree = TRUE
+  #     
+  #     idx_pith = which(pith2tree == i)
+  #     
+  #     pith_obs = data.frame(pith = 0,
+  #                           year = years[pith2year[idx_pith]])
+  #   } else {
+  #     
+  #     pith_tree = FALSE
+  #     
+  #     pith_obs = data.frame(pith = NA,
+  #                           year = years[N_years])
+  #   }
+  # }
+}
+
+pdf(paste0('figures/rw_model_vs_data_scatter_update_', model, '.pdf'), width=10, height=6)
+p <- ggplot(data=rw_validate) +
+  geom_abline(intercept=0, slope=1, lty=2, colour='red') +
+  geom_smooth(method='lm', aes(x=rw_obs, y=rw_model_median), fullrange=TRUE) +
+  geom_linerange(aes(x=rw_obs, ymin=rw_model_lo, ymax=rw_model_hi), colour='black', alpha=0.3) +
+  geom_point(aes(x=rw_obs, y=rw_model_median), colour='black', size=2, alpha=0.3) +
+  # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
+  # ylim(c(0,500)) +
+  xlab('rw obs (mm)') +
+  ylab('rw model (mm)') +
+  theme_bw(16) + 
+  coord_equal() +
+  xlim(c(0, 9)) +
+  ylim(c(0, 9)) 
+print(p)
 dev.off()
 
 # #######################################################################################################################################

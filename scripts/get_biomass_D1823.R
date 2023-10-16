@@ -16,6 +16,9 @@ interval_cut = FALSE #what is this?
 
 remove_deadtrees = TRUE
 
+year_start = 1960
+year_end = 2021
+
 model = 'species_time_negd_2pith_status'
 # model = 'species_time_interval'
 data_name = 'pith_status'
@@ -183,6 +186,9 @@ agb_melt = melt(biomass_iter)
 
 colnames(agb_melt) = c('iter', 'stat_id', 'year_idx', 'agb')
 
+
+
+
 ############################################################################################
 #
 ############################################################################################
@@ -191,6 +197,9 @@ agb_melt = data.frame(species_id = species_ids[core2species[agb_melt$stat_id]],
                       agb_melt)
 
 agb_melt$year = years[agb_melt$year_idx]
+
+agb_melt = subset(agb_melt, year %in% seq(year_start, year_end))
+
 
 # ggplot() +
 #   geom_line(data=bio_melt, aes(x=year, y=value, colour=stat_id, group=stat_id)) +
@@ -343,9 +352,9 @@ ggplot() +
   ylab('biomass (kg)')
 
 if (update){
-png('figures/agb_vs_year_ind_species_facet_update.png', width=1200, height=700)
+png(paste0('figures/agb_vs_year_ind_species_facet_update_', model, '.png'), width=1200, height=700)
 } else {
-png('figures/agb_vs_year_ind_species_facet.png', width=1200, height=700)
+png(paste0('figures/agb_vs_year_ind_species_facet_', model, '.png'), width=1200, height=700)
 }
 # pdf('figures/agb_vs_year_ind_species_facet.pdf', width=10, height=6)
 p <- ggplot() +
@@ -370,9 +379,9 @@ agb_quants_species = agb_species %>%
                    agb_hi = quantile(agb, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-pdf('figures/agb_vs_year_by_species_update.pdf', width=10, height=6)
+pdf(paste0('figures/agb_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/agb_vs_year_by_species.pdf', width=10, height=6)
+  pdf(paste0('figures/agb_vs_year_by_species_', model, '.pdf'), width=10, height=6)
 }
 p <- ggplot() +
   geom_ribbon(data=agb_quants_species, aes(x=year, ymin=agb_lo, ymax=agb_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
@@ -384,13 +393,29 @@ print(p)
 # ggsave('figures/agb_vs_year_by_species.png', width=10, height=10, scale=3)
 dev.off()
 
+# p <- ggplot() +
+#   geom_ribbon(data=agb_quants_species, aes(x=year, ymin=log(agb_lo), ymax=log(agb_hi), group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
+#   geom_line(data=agb_quants_species, aes(x=year, y=log(agb_median), group=species_id, colour=species_id)) +
+#   theme_bw(18) +
+#   xlab('year') +
+#   ylab('biomass (kg)') 
+# print(p)
+
 ggplot() +
   geom_ribbon(data=agb_quants_species, aes(x=year, ymin=agb_lo, ymax=agb_hi), fill='lightgrey') +
   geom_line(data=agb_quants_species, aes(x=year, y=agb_median)) +
   theme_bw(14) +
   xlab('year') +
-  ylab('biomass increment (kg)')  +
+  ylab('biomass (kg)')  +
   facet_wrap(~species_id)
+
+ggplot() +
+  geom_ribbon(data=agb_quants_species, aes(x=year, ymin=agb_lo, ymax=agb_hi), fill='lightgrey') +
+  geom_line(data=agb_quants_species, aes(x=year, y=agb_median)) +
+  theme_bw(14) +
+  xlab('year') +
+  ylab('biomass (kg)')  +
+  facet_wrap(~species_id, scales = 'free_y')
 
 agb_all = agb_melt %>% 
   group_by(year, iter) %>%
@@ -454,37 +479,35 @@ agbi_quants_species = agbi_species %>%
                    agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-  pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/agbi_vs_year_by_species.pdf', width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_', model, '.pdf'), width=10, height=6)
 }
 ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
   geom_line(data=agbi_quants_species, aes(x=year, y=agbi_median, group=species_id, colour=species_id)) +
   theme_bw(14) +
   xlab('year') +
-  ylab('biomass increment (kg)')  +
-  xlim(c(year_lo, year_hi)) 
+  ylab('biomass increment (kg)')  
 dev.off()
 
 if (update){
-  pdf('figures/agbi_vs_year_by_species_update.pdf', width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/agbi_vs_year_by_species.pdf', width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_', model, '.pdf'), width=10, height=6)
 }
 ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
   geom_line(data=agbi_quants_species, aes(x=year, y=agbi_median, group=species_id, colour=species_id)) +
   theme_bw(18) +
   xlab('year') +
-  ylab('biomass increment (kg)') +
-  xlim(c(year_lo, year_hi)) 
+  ylab('biomass increment (kg)') 
 dev.off()
 
 if (update){
-pdf('figures/agbi_vs_year_facet_species_update.pdf', width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_facet_species_update_', model, '.pdf'), width=10, height=6)
 } else {
-pdf('figures/agbi_vs_year_facet_species.pdf', width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_facet_species_', model, '.pdf'), width=10, height=6)
 }
   p <- ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +
@@ -492,7 +515,6 @@ pdf('figures/agbi_vs_year_facet_species.pdf', width=10, height=6)
   theme_bw(14) +
   xlab('year') +
   ylab('biomass increment (kg)')  +
-  xlim(c(year_lo, year_hi)) +
   facet_wrap(~species_id) 
 print(p)
 dev.off()
@@ -509,17 +531,16 @@ agbi_quants_all = agbi_all %>%
                    agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-pdf('figures/agbi_vs_year_overall_update.pdf', width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_overall_update_', model, '.pdf'), width=10, height=6)
 } else {
-  pdf('figures/agbi_vs_year_overall.pdf', width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_overall_', model, '.pdf'), width=10, height=6)
 }
 p <- ggplot() +
   geom_ribbon(data=agbi_quants_all, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +
   geom_line(data=agbi_quants_all, aes(x=year, y=agbi_median)) +
   theme_bw(16) +
   xlab('year') +
-  ylab('biomass increment (kg)') +
-  xlim(c(year_lo, year_hi)) 
+  ylab('biomass increment (kg)') 
 print(p)
 dev.off()
 
