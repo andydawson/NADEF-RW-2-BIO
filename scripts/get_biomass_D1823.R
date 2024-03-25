@@ -3,7 +3,7 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 # library(grid)
-rm(list = ls())
+# rm(list = ls())
 coords = read.csv('data/maleki-2021/hectare_plots.csv')
 coords_D1823 = as.numeric(coords[which(coords$plot_id == 'H1823'), c('long', 'lat')])
 
@@ -19,22 +19,30 @@ remove_deadtrees = TRUE
 year_start = 1960
 year_end = 2021
 
-model = 'species_time_negd_2pith_status'
-# model = 'species_time_interval'
-data_name = 'pith_status'
+# model = 'species_time_negd_2pith_status'
+# # model = 'species_time_interval'
+# data_name = 'pith_status'
+# 
+# model = 'species_time_negd_pith'
+# model = 'species_time_negd_2pith'
+# model = 'species_time_negd_2pith_status'
+# model = 'repeat_species_time_negd'
+# data_name = 'pith'
+# data_name = 'pith_status'
+# data_name = 'repeat_pith_status'
 
 if (update){
-  # dat = readRDS('data/D1823/D1823_input_update.RDS')
-  # dat = readRDS('data/D1823/D1823_input_update_pith.RDS')
-  dat = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
+  # dataset = readRDS('data/D1823/D1823_input_update.RDS')
+  # dataset = readRDS('data/D1823/D1823_input_update_pith.RDS')
+  dataset = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
   # post = readRDS('output/D1823_output_update.RDS')
-  post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
+  post = readRDS(paste0('output/D1823_output_update_', model_name, '.RDS'))
 } else {
-  # dat = readRDS('data/D1823/D1823_input.RDS')
+  # dataset = readRDS('data/D1823/D1823_input.RDS')
   # post = readRDS('output/D1823_output.RDS') 
 }
 
-list2env(dat, envir = globalenv())
+list2env(dataset, envir = globalenv())
 list2env(post, envir = globalenv())
 
 
@@ -120,7 +128,7 @@ if(remove_deadtrees){
   
   #
   for (tree in 1:N_trees){
-    print(tree)
+    # print(tree)
     stem_id = core2stemids[tree]
     if(stem_id %in% dead_trees_first_year$stem_id){ #these trees are assumed to die between the start_death and the end_death
       start_death =  1+as.numeric(dead_trees_first_year$year0[dead_trees_first_year$stem_id == stem_id]) 
@@ -172,10 +180,10 @@ for (tree in 1:N_trees){
                                  species = tree_species,
                                  coords = coords_D1823)
     
-    foo = get_biomass(dbh = d_post[iter, tree,],
-                                            genus = tree_genus,
-                                            species = tree_species,
-                                            coords = coords_D1823)
+    # foo = get_biomass(dbh = d_post[iter, tree,],
+    #                                         genus = tree_genus,
+    #                                         species = tree_species,
+    #                                         coords = coords_D1823)
     
     # print(all(diff(foo)>0, na.rm = TRUE))
   }
@@ -332,7 +340,7 @@ agb_quants = agb_melt %>%
 bpa_stat_id = unique(agb_melt[which(agb_melt$species_id == 'BPA'), 'stat_id'])
 for (i in 1:length(bpa_stat_id)){
   id = bpa_stat_id[i]
-  print(id)
+  # print(id)
   
   agb_sub = agb_quants[which(agb_quants$stat_id == id),]
   
@@ -352,9 +360,9 @@ ggplot() +
   ylab('biomass (kg)')
 
 if (update){
-png(paste0('figures/agb_vs_year_ind_species_facet_update_', model, '.png'), width=1200, height=700)
+png(paste0('figures/agb_vs_year_ind_species_facet_update_', model_name, '.png'), width=1200, height=700)
 } else {
-png(paste0('figures/agb_vs_year_ind_species_facet_', model, '.png'), width=1200, height=700)
+png(paste0('figures/agb_vs_year_ind_species_facet_', model_name, '.png'), width=1200, height=700)
 }
 # pdf('figures/agb_vs_year_ind_species_facet.pdf', width=10, height=6)
 p <- ggplot() +
@@ -379,9 +387,9 @@ agb_quants_species = agb_species %>%
                    agb_hi = quantile(agb, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-pdf(paste0('figures/agb_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
+pdf(paste0('figures/agb_vs_year_by_species_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/agb_vs_year_by_species_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agb_vs_year_by_species_', model_name, '.pdf'), width=10, height=6)
 }
 p <- ggplot() +
   geom_ribbon(data=agb_quants_species, aes(x=year, ymin=agb_lo, ymax=agb_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
@@ -479,9 +487,9 @@ agbi_quants_species = agbi_species %>%
                    agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-  pdf(paste0('figures/agbi_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/agbi_vs_year_by_species_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_', model_name, '.pdf'), width=10, height=6)
 }
 ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
@@ -492,9 +500,9 @@ ggplot() +
 dev.off()
 
 if (update){
-  pdf(paste0('figures/agbi_vs_year_by_species_update_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/agbi_vs_year_by_species_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_by_species_', model_name, '.pdf'), width=10, height=6)
 }
 ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi, group=species_id, colour=species_id, fill=species_id), alpha=0.5) +
@@ -505,9 +513,9 @@ ggplot() +
 dev.off()
 
 if (update){
-pdf(paste0('figures/agbi_vs_year_facet_species_update_', model, '.pdf'), width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_facet_species_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-pdf(paste0('figures/agbi_vs_year_facet_species_', model, '.pdf'), width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_facet_species_', model_name, '.pdf'), width=10, height=6)
 }
   p <- ggplot() +
   geom_ribbon(data=agbi_quants_species, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +
@@ -531,9 +539,9 @@ agbi_quants_all = agbi_all %>%
                    agbi_hi = quantile(agbi, c(0.975), na.rm = TRUE), .groups="keep")
 
 if (update){
-pdf(paste0('figures/agbi_vs_year_overall_update_', model, '.pdf'), width=10, height=6)
+pdf(paste0('figures/agbi_vs_year_overall_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/agbi_vs_year_overall_', model, '.pdf'), width=10, height=6)
+  pdf(paste0('figures/agbi_vs_year_overall_', model_name, '.pdf'), width=10, height=6)
 }
 p <- ggplot() +
   geom_ribbon(data=agbi_quants_all, aes(x=year, ymin=agbi_lo, ymax=agbi_hi), fill='lightgrey') +

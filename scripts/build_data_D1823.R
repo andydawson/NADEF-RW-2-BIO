@@ -5,6 +5,7 @@ library(ggplot2)
 # for original data: update = FALSE
 # for updated data: update = TRUE
 update = TRUE
+dbh_repeat = TRUE
 data_name = 'pith_status'
 
 # meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
@@ -14,6 +15,9 @@ rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
 
 pith = read.csv('data/D1823/D1823_pith_update.csv')
 # pith$pith_missed = rowSums(pith[,4:5], na.rm=TRUE)
+
+# remove these since we know they are incorrect pith estimates?
+# pith = pith[which(!(pith$stem_id %in% c('405', 'C284', 'C856'))),]
 
 keep_numeric = function(x){ 
   if (any(!is.na(x))){
@@ -25,10 +29,13 @@ keep_numeric = function(x){
 
 pith$pith_missed = apply(pith[,4:5], 1, keep_numeric)
 
-if (update) {
+if (update & !dbh_repeat) {
   meta = read.csv('data/D1823/D1823_meta_update.csv', stringsAsFactors = FALSE)
   # meta$dbh[which(meta$year == 2021)] = meta[which(meta$year == 2021),'dbh']/10
   
+  rw = read.csv('data/D1823/D1823_rw_update.csv', stringsAsFactors = FALSE)
+} else if (update & dbh_repeat){
+  meta = read.csv('data/D1823/D1823_meta_update_repeat.csv', stringsAsFactors = FALSE)
   rw = read.csv('data/D1823/D1823_rw_update.csv', stringsAsFactors = FALSE)
 }
 
@@ -51,18 +58,30 @@ meta$status_id[which(meta$status_id == 'v')] = 'vd'
 # lo = 0
 hi = 100
 lo = 0
-meta_sub = meta[which((meta$x<hi)&(meta$x>lo)&(meta$y<hi)&(meta$y>lo)),]
+
+length(unique(meta$stem_id))
+meta = meta[which(!is.na(meta$x)),]
+length(unique(meta$stem_id))
+
+meta_sub = meta[which((meta$x<=hi)&(meta$x>=lo)&(meta$y<=hi)&(meta$y>=lo)),]
+length(unique(meta_sub$stem_id))
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
   geom_point(aes(x=x,y=y)) 
 
-meta_sub = meta_sub[which(meta_sub$dbh>10),]
+meta_sub = meta_sub[which(meta_sub$dbh>=10),]
+length(unique(meta_sub$stem_id))
+
 # subset the data to smaller region
 ggplot(data=meta_sub) + 
   geom_point(aes(x=x,y=y)) 
 
 meta_sub = meta_sub[which(!is.na(meta_sub$dbh)),]
+length(unique(meta_sub$stem_id))
+
 meta_sub = meta_sub[which(meta_sub$stem_id != ""),]
+length(unique(meta_sub$stem_id))
+
 # meta_sub = meta_sub[which(meta_sub$year %in% c(1994, 2004, 2011, 2019)),]
 
 length(unique(meta_sub$stem_id))
@@ -251,8 +270,11 @@ d2year
 
 head(logy)
 
-if (update) {
+if (update & !dbh_repeat) {
   fname = paste0('data/D1823/D1823_input_update_', data_name, '.RDS')
+} else if (update & dbh_repeat) {
+  fname = paste0('data/D1823/D1823_input_update_repeat_', data_name, '.RDS')
+  
 } else {
   fname = paste0('data/D1823/D1823_input_', data_name, '.RDS')
 }

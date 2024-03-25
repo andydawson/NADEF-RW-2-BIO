@@ -8,26 +8,25 @@ library(tidyr)
 update = TRUE
 interval_cut = FALSE
 
-# model = 'species_time'
-# model = 'species_time_interval'
-model = 'species_time_negd_pith'
-model = 'species_time_negd_2pith'
-model = 'species_time_negd_2pith_status'
-data_name = 'pith'
-data_name = 'pith_status'
+# model_name = 'species_time'
+# model_name = 'species_time_interval'
+
+figure_dir = file.path('figures', model_name)
+
+dir.create(figure_dir)
 
 if (update){
-  # dat = readRDS('data/D1823/D1823_input_update.RDS')
-  # dat = readRDS('data/D1823/D1823_input_update_interval.RDS')
-  dat = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
+  # dataset = readRDS('data/D1823/D1823_input_update.RDS')
+  # dataset = readRDS('data/D1823/D1823_input_update_interval.RDS')
+  dataset = readRDS(paste0('data/D1823/D1823_input_update_', data_name, '.RDS'))
   # post = readRDS('output/D1823_output_update.RDS')
-  post = readRDS(paste0('output/D1823_output_update_', model, '.RDS'))
+  post = readRDS(paste0('output/D1823_output_update_', model_name, '.RDS'))
 } else {
-  # dat = readRDS('data/D1823/D1823_input.RDS')
+  # dataset = readRDS('data/D1823/D1823_input.RDS')
   # post = readRDS('output/D1823_output.RDS') 
 }
 
-list2env(dat, envir = globalenv())
+list2env(dataset, envir = globalenv())
 list2env(post, envir = globalenv())
 
 status_codes = factor(status_codes)
@@ -131,16 +130,14 @@ year_hi = max(years)
 
 # which(!is.na(y[,122]))
 
-# plot data and model DBH for each tree
+# plot data and model_name DBH for each tree
 if (update) {
-  pdf(paste0('figures/dbh_vs_year_estimated_update_', model, '.pdf'), width=10, height=6)
+  pdf(paste0(figure_dir, '/dbh_vs_year_estimated_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/dbh_vs_year_estimated_', model, '.pdf'), width=10, height=6)
+  pdf(paste0(figure_dir, '/dbh_vs_year_estimated_', model_name, '.pdf'), width=10, height=6)
 }
+print("DBH vs year")
 for (i in 1:N_trees){
-  
-  print(i)
-  
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
   
@@ -204,19 +201,17 @@ for (i in 1:N_trees){
   if (pith_tree){ 
     p = p + geom_point(data=pith_obs, aes(x=year, y=pith), size=2, colour='dodgerblue')
   }
-    
+  
   
   print(p)
   
 }
 dev.off()
 
-
-
-# which(!is.na(y[,122]))
-
 # create data frame of DBH model and data values
-dbh_validate = data.frame(year = numeric(0),
+dbh_validate = data.frame(stat_id = numeric(0),
+                          stem_id = character(0),
+                          year = numeric(0),
                           d_model_mean = numeric(0),
                           d_model_median = numeric(0),
                           d_model_lo = numeric(0),
@@ -226,7 +221,31 @@ dbh_validate = data.frame(year = numeric(0),
                           species_id = character(0))
 for (i in 1:N_trees){
   
-  print(i)
+  # print(i)
+  
+  # stem_id = core2stemids[i]
+  # species_id = species_ids[core2species[i]]
+  # 
+  # year_start = rw_year_start[i]
+  # year_end = rw_year_end[i]
+  # 
+  # d_iter = d_latent[, i, ]
+  # 
+  # d_mean = apply(d_iter, 2, mean, na.rm=TRUE)
+  # d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
+  # 
+  # dbh_tree = data.frame(d_mean = d_mean, 
+  #                       d_median = d_quant[,2], 
+  #                       d_lo = d_quant[,1], 
+  #                       d_hi = d_quant[,3], 
+  #                       year = years)
+  # 
+  # idx_d_obs = which(d2tree == i)
+  # 
+  # dbh_obs = data.frame(d_obs = d[idx_d_obs],
+  #                      year = years[d2year[idx_d_obs]],
+  #                      status = status_codes[d2status[idx_d_obs]])
+  
   
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
@@ -251,14 +270,19 @@ for (i in 1:N_trees){
   d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
   
   dbh_model = data.frame(d_model_mean = d_mean, 
-                        d_model_median = d_quant[,2], 
-                        d_model_lo = d_quant[,1], 
-                        d_model_hi = d_quant[,3], 
-                        year = years)
+                         d_model_median = d_quant[,2], 
+                         d_model_lo = d_quant[,1], 
+                         d_model_hi = d_quant[,3], 
+                         year = years)
   dbh_model = subset(dbh_model, year %in% dbh_obs$year)
   
+  dbh_merged = merge(dbh_model, dbh_obs)
+  dbh_merged = data.frame(stat_id = rep(i),
+                          stem_id = rep(stem_id),
+                          dbh_merged)
+  
   dbh_validate = rbind(dbh_validate,
-                       merge(dbh_model, dbh_obs))
+                       dbh_merged)
   
   # if (!is.na(N_pith)){
   #   
@@ -280,15 +304,14 @@ for (i in 1:N_trees){
   # }
 }
 
-pdf(paste0('figures/dbh_model_vs_data_scatter_update_', model, '.pdf'), width=10, height=6)
+# pdf(paste0(figure_dir, '/dbh_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
 p <- ggplot(data=dbh_validate) +
   geom_abline(intercept=0, slope=1, lty=2, colour='red') +
-  geom_smooth(method='lm', aes(x=d_obs, y=d_model_median), fullrange=TRUE) +
+  # geom_smooth(method='lm', aes(x=d_obs, y=d_model_median), fullrange=TRUE) +
   # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
   geom_linerange(aes(x=d_obs, ymin=d_model_lo, ymax=d_model_hi), colour='black', alpha=0.3) +
   geom_point(aes(x=d_obs, y=d_model_median), colour='black', size=2, alpha=0.3) +
-  # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
-  # ylim(c(0,500)) +
+  geom_line(stat='smooth', method='lm', formula = y ~ x, aes(x=d_obs, y=d_model_median), colour = 'blue', alpha=0.5, fullrange=TRUE) +
   xlab('dbh obs (cm)') +
   ylab('dbh model (cm)') +
   theme_bw(16)  + 
@@ -296,7 +319,131 @@ p <- ggplot(data=dbh_validate) +
   xlim(c(0, 60)) +
   ylim(c(0, 60)) 
 print(p)
-dev.off()
+# dev.off()
+ggsave(paste0(figure_dir, '/dbh_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+ggsave(paste0(figure_dir, '/dbh_model_vs_data_scatter_update_', model_name, '.png'), width=10, height=6)
+
+# pdf(paste0(figure_dir, '/dbh_model_vs_data_scatter_year_wrap_update_', model_name, '.pdf'), width=10, height=6)
+p <- ggplot(data=dbh_validate) +
+  geom_abline(intercept=0, slope=1, lty=2, colour='red') +
+  # geom_smooth(method='lm', aes(x=d_obs, y=d_model_median), fullrange=TRUE) +
+  # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
+  geom_linerange(aes(x=d_obs, ymin=d_model_lo, ymax=d_model_hi), colour='black', alpha=0.3) +
+  geom_point(aes(x=d_obs, y=d_model_median), colour='black', size=2, alpha=0.3) +
+  geom_line(stat='smooth', method='lm', formula = y ~ x, aes(x=d_obs, y=d_model_median), colour = 'blue', alpha=0.5, fullrange=TRUE) +
+  # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
+  # ylim(c(0,500)) +
+  xlab('dbh obs (cm)') +
+  ylab('dbh model (cm)') +
+  theme_bw(16)  + 
+  coord_fixed() +
+  xlim(c(0, 60)) +
+  ylim(c(0, 60))  +
+  facet_wrap(~year)
+print(p)
+# dev.off()
+ggsave(paste0(figure_dir, '/dbh_model_vs_data_scatter_year_wrap_update_', model_name, '.pdf'), width=10, height=6)
+ggsave(paste0(figure_dir, '/dbh_model_vs_data_scatter_year_wrap_update_', model_name, '.png'), width=10, height=6)
+
+#######################################################################################################################################
+# pith
+#######################################################################################################################################
+
+# create data frame of DBH model and data values
+pith_validate = data.frame(stat_id = numeric(0),
+                           stem_id = character(0),
+                           species_id = character(0),
+                           year = numeric(0),
+                           type = character(0),
+                           pith_obs = numeric(0))
+                         
+for (i in 1:N_trees){
+  
+  # print(i)
+  
+  if (!is.na(N_pith)){
+    
+    if (any(pith2tree == i)) {
+      
+      stem_id = core2stemids[i]
+      species_id = species_ids[core2species[i]]
+      
+      year_start = rw_year_start[i]
+      year_end = rw_year_end[i]
+      
+      
+      pith_tree = TRUE
+      
+      idx_pith = which(pith2tree == i)
+      
+      # pith_obs = data.frame(pith = 0,
+      #                       year = years[pith2year[idx_pith]])
+      
+      pith_obs = data.frame(year_pith = years[pith2year[idx_pith]],
+                            species_id = rep(species_id))
+      
+      d_iter = d_latent[, i, ]
+      
+      d_mean = apply(d_iter, 2, mean, na.rm=TRUE)
+      d_quant = t(apply(d_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
+      
+      d_min = apply(d_iter, 2, min)
+      year_all_pos = min(which(d_min>0))
+      all_pos = data.frame(year = year_all_pos, type = 'all_pos')
+      
+      d_max = apply(d_iter, 2, max)
+      year_first_pos = min(which(d_max>0))
+      first_pos = data.frame(year = year_first_pos, type = 'first_pos')
+      
+      # first year median greater than 0
+      d_median = apply(d_iter, 2, median)
+      year_median_pos = min(which(d_median>0))
+      median_pos = data.frame(year = year_median_pos, type = 'median_pos')
+      
+      # first year mean greater than 0
+      d_mean = apply(d_iter, 2, mean)
+      year_mean_pos = min(which(d_mean>0))
+      mean_pos = data.frame(year = year_mean_pos, type = 'mean_pos')
+      
+      # year of pith measurement
+      
+      pith_model = bind_rows(all_pos, first_pos, mean_pos, median_pos)
+      pith_model$year = years[pith_model$year]
+
+      # pith_merged = merge(pith_model, pith_obs)
+      pith_merged = data.frame(stat_id = rep(i),
+                               stem_id = rep(stem_id),
+                               species_id = rep(species_id),
+                               pith_model, 
+                               pith_obs =  years[pith2year[idx_pith]])
+      
+      pith_validate = rbind(pith_validate,
+                            pith_merged)
+    } 
+    
+  }
+  
+}
+
+# pdf(paste0(figure_dir, '/dbh_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+p <- ggplot(data=pith_validate) +
+  geom_abline(intercept=0, slope=1, lty=2, colour='red') +
+  # geom_smooth(method='lm', aes(x=d_obs, y=d_model_median), fullrange=TRUE) +
+  # geom_line(data=dbh_tree, aes(x=year, y=d_mean)) +
+  # geom_linerange(aes(x=pith_obs, ymin=d_model_lo, ymax=d_model_hi), colour='black', alpha=0.3) +
+  geom_point(aes(x=pith_obs, y=year), colour='black', size=2, alpha=0.3) +
+  geom_line(stat='smooth', method='lm', formula = y ~ x, aes(x=pith_obs, y=year), colour = 'blue', alpha=0.5, fullrange=TRUE) +
+  xlab('pith obs year') +
+  ylab('pith model year') +
+  theme_bw(14)  + 
+  coord_equal() +
+  xlim(c(1900, 1990)) +
+  ylim(c(1900, 1990)) +
+  facet_wrap(~type)
+print(p)
+# dev.off()
+ggsave(paste0(figure_dir, '/pith_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+ggsave(paste0(figure_dir, '/pith_model_vs_data_scatter_update_', model_name, '.png'), width=10, height=6)
 
 #######################################################################################################################################
 #
@@ -304,13 +451,12 @@ dev.off()
 
 # plot data and model DBH for each tree
 if (update) {
-  pdf(paste0('figures/rw_vs_year_estimated_update_', model, '.pdf'), width=10, height=6)
+  pdf(paste0(figure_dir, '/rw_vs_year_estimated_update_', model_name, '.pdf'), width=10, height=6)
 } else {
-  pdf(paste0('figures/rw_vs_year_estimated_', model, '.pdf'), width=10, height=6)
+  pdf(paste0(figure_dir, '/rw_vs_year_estimated_', model_name, '.pdf'), width=10, height=6)
 }
+print("RW vs year")
 for (i in 1:N_trees){
-  
-  print(i)
   
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
@@ -351,15 +497,15 @@ dev.off()
 
 # create data frame of DBH model and data values
 rw_validate = data.frame(year = numeric(0),
-                          rw_model_mean = numeric(0),
-                          rw_model_median = numeric(0),
-                          rw_model_lo = numeric(0),
-                          rw_model_hi = numeric(0),
-                          rw_obs = numeric(0),
-                          species_id = character(0))
+                         rw_model_mean = numeric(0),
+                         rw_model_median = numeric(0),
+                         rw_model_lo = numeric(0),
+                         rw_model_hi = numeric(0),
+                         rw_obs = numeric(0),
+                         species_id = character(0))
 for (i in 1:N_trees){
   
-  print(i)
+  # print(i)
   
   stem_id = core2stemids[i]
   species_id = species_ids[core2species[i]]
@@ -378,14 +524,14 @@ for (i in 1:N_trees){
   x_quant = t(apply(x_iter, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm=TRUE)))
   
   rw_model = data.frame(rw_model_mean = x_mean, 
-                         rw_model_median = x_quant[,2], 
-                         rw_model_lo = x_quant[,1], 
-                         rw_model_hi = x_quant[,3], 
-                         year = years)
+                        rw_model_median = x_quant[,2], 
+                        rw_model_lo = x_quant[,1], 
+                        rw_model_hi = x_quant[,3], 
+                        year = years)
   rw_model = subset(rw_model, year %in% rw_obs$year)
   
   rw_validate = rbind(rw_validate,
-                       merge(rw_model, rw_obs))
+                      merge(rw_model, rw_obs))
   
   # if (!is.na(N_pith)){
   #   
@@ -407,7 +553,7 @@ for (i in 1:N_trees){
   # }
 }
 
-pdf(paste0('figures/rw_model_vs_data_scatter_update_', model, '.pdf'), width=10, height=6)
+# pdf(paste0(figure_dir, '/rw_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
 p <- ggplot(data=rw_validate) +
   geom_abline(intercept=0, slope=1, lty=2, colour='red') +
   geom_smooth(method='lm', aes(x=rw_obs, y=rw_model_median), fullrange=TRUE) +
@@ -422,7 +568,31 @@ p <- ggplot(data=rw_validate) +
   xlim(c(0, 9)) +
   ylim(c(0, 9)) 
 print(p)
-dev.off()
+# dev.off()
+ggsave(paste0(figure_dir, '/rw_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+ggsave(paste0(figure_dir, '/rw_model_vs_data_scatter_update_', model_name, '.png'), width=10, height=6)
+
+logrw_validate = rw_validate
+logrw_validate[,2:ncol(logrw_validate)] = log(logrw_validate[,2:ncol(logrw_validate)])
+
+# pdf(paste0(figure_dir, '/logrw_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+p <- ggplot(data=logrw_validate) +
+  geom_abline(intercept=0, slope=1, lty=2, colour='red') +
+  geom_smooth(method='lm', aes(x=rw_obs, y=rw_model_median), fullrange=TRUE) +
+  geom_linerange(aes(x=rw_obs, ymin=rw_model_lo, ymax=rw_model_hi), colour='black', alpha=0.3) +
+  geom_point(aes(x=rw_obs, y=rw_model_median), colour='black', size=2, alpha=0.3) +
+  # geom_dog(data=rw_obs, aes(x=year, y=x_obs, dog='glasses'), size=2) +
+  # ylim(c(0,500)) +
+  xlab('log rw obs (log(mm))') +
+  ylab('log rw model  (log(mm))') +
+  theme_bw(16) + 
+  coord_equal() #+
+# xlim(c(0, 9)) +
+# ylim(c(0, 9)) 
+print(p)
+# dev.off()
+ggsave(paste0(figure_dir, '/logrw_model_vs_data_scatter_update_', model_name, '.pdf'), width=10, height=6)
+ggsave(paste0(figure_dir, '/logrw_model_vs_data_scatter_update_', model_name, '.png'), width=10, height=6)
 
 # #######################################################################################################################################
 # # plot time effects
@@ -443,9 +613,9 @@ dev.off()
 #   ylab('beta_t') +
 #   theme_bw(16)
 # if (update) {
-#   ggsave('figures/time_effect_estimated_update.pdf')
+#   ggsave(figure_dir, '/time_effect_estimated_update.pdf')
 # } else {
-#   ggsave('figures/time_effect_estimated.pdf')
+#   ggsave(figure_dir, '/time_effect_estimated.pdf')
 # }
 
 #######################################################################################################################################
@@ -477,9 +647,11 @@ ggplot(data=beta_t_quant) +
   theme_bw(16) +
   facet_grid(species_id~.)
 if (update) {
-  ggsave(paste0('figures/time_species_effect_estimated_update', model, '.pdf'))
+  ggsave(paste0(figure_dir, '/time_species_effect_estimated_update_', model_name, '.pdf'))
+  ggsave(paste0(figure_dir, '/time_species_effect_estimated_update_', model_name, '.png'))
 } else {
-  ggsave(paste0('figures/time_species_effect_estimated', model, '.pdf'))
+  ggsave(paste0(figure_dir, '/time_species_effect_estimated', model_name, '.pdf'))
+  ggsave(paste0(figure_dir, '/time_species_effect_estimated', model_name, '.png'))
 }
 
 # ggplot(data=beta_t_quant) +
@@ -492,9 +664,9 @@ if (update) {
 #   theme_bw(16) +
 #   facet_grid(species_id~.) 
 # if (update) {
-#   ggsave('figures/time_species_effect_estimated_update.pdf', width=10, height=8)
+#   ggsave(figure_dir, '/time_species_effect_estimated_update.pdf', width=10, height=8)
 # } else {
-#   ggsave('figures/time_species_effect_estimated.pdf', width=10, height=8)
+#   ggsave(figure_dir, '/time_species_effect_estimated.pdf', width=10, height=8)
 # }
 
 # #######################################################################################################################################
@@ -518,9 +690,9 @@ if (update) {
 #   ylab('beta_k') +
 #   theme_bw(16)
 # if (update) {
-#   ggsave('figures/species_effect_estimated_update.pdf')
+#   ggsave(figure_dir, '/species_effect_estimated_update.pdf')
 # } else {
-#   ggsave('figures/species_effect_estimated.pdf')
+#   ggsave(figure_dir, '/species_effect_estimated.pdf')
 # }
 # 
 # }
@@ -534,19 +706,21 @@ beta0 = post$beta0
 beta0_quant = quantile(beta0, c(0.025, 0.5, 0.975))
 names(beta0_quant) = c('lo', 'mid', 'hi')
 beta0_quant = data.frame(tree=1, t(beta0_quant))
-
-ggplot(data=beta0_quant) +
-  geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
-  geom_point(aes(x=tree, y=mid)) + 
-  geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
-  xlab('tree') +
-  ylab('beta') +
-  theme_bw(16)
-if (update) {
-  ggsave('figures/individual_effect_estimated_update.pdf')
-} else {
-  ggsave('figures/individual_effect_estimated.pdf')
-}
+# 
+# ggplot(data=beta0_quant) +
+#   geom_hline(aes(yintercept=0), lty=2, lwd=1.2) +
+#   geom_point(aes(x=tree, y=mid)) + 
+#   geom_linerange(aes(x=tree, ymin=lo, ymax=hi)) +
+#   xlab('tree') +
+#   ylab('beta') +
+#   theme_bw(16)
+# if (update) {
+#   ggsave(figure_dir, '/individual_effect_estimated_update.pdf')
+#   ggsave(figure_dir, '/individual_effect_estimated_update.png')
+# } else {
+#   ggsave(figure_dir, '/individual_effect_estimated.pdf')
+#   ggsave(figure_dir, '/individual_effect_estimated.png')
+# }
 
 #######################################################################################################################################
 # plot tree effects
@@ -571,7 +745,7 @@ beta_quant = beta_quant[order(beta_quant$species),]
 beta_quant$species = factor(beta_quant$species)
 
 # # beta_quant$tree = factor(beta_quant$tree)
-beta_quant = beta_quant %>% group_by(species) %>% arrange(mid, .by_group = TRUE)
+beta_quant = beta_quant %>% group_by(species) %>% dplyr::arrange(mid, .by_group = TRUE)
 beta_quant$tree = factor(beta_quant$tree, levels = beta_quant$tree)
 
 ggplot(data=beta_quant) +
@@ -616,8 +790,10 @@ ggplot(data=beta_quant) +
 #   facet_wrap(~species, scales="free_x")
 
 if (update) {
-  ggsave('figures/individual_effect_estimated_update.pdf')
+  ggsave(paste0(figure_dir, '/individual_effect_estimated_update.pdf'))
+  ggsave(paste0(figure_dir, '/individual_effect_estimated_update.png'))
 } else {
-  ggsave('figures/individual_effect_estimated.pdf')
+  ggsave(paste0(figure_dir, '/individual_effect_estimated.pdf'))
+  ggsave(paste0(figure_dir, '/individual_effect_estimated.png'))
 }
 
