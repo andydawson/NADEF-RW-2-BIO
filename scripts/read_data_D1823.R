@@ -27,7 +27,7 @@ species_table = data.frame(species_raw = c('Ab', 'Pg', 'To', 'Pt'),
 
 ## read in census raw data Maleki et al., (2021) 
 # this data file is complete, it includes dbh data from Aussenac et al., 2017.
-dat = read.csv('data/D1823/D1823_census_raw.csv', stringsAsFactors = FALSE)
+dat = read.csv('data/D1823/D1823_census_raw_edit.csv', stringsAsFactors = FALSE)
 
 # rename columns from french to English
 colnames(dat)[1:4] = c('parcel', 'species_id', 'stem_id', 'ancient_id') 
