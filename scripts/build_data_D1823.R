@@ -6,7 +6,8 @@ library(ggplot2)
 # for updated data: update = TRUE
 update = TRUE
 dbh_repeat = TRUE
-data_name = 'pith_status'
+live_only = TRUE
+data_name = 'pith_live'
 
 # meta = read.csv('data/D1823/D1823_meta.csv', stringsAsFactors = FALSE)
 # rw = read.csv('data/D1823/D1823_rw.csv', stringsAsFactors = FALSE)
@@ -53,6 +54,10 @@ length(which((meta$status_id %in% c('md', 'mc'))))
 
 meta = meta[which(!(meta$status_id %in% c('md', 'mc'))),]
 meta$status_id[which(meta$status_id == 'v')] = 'vd'
+
+if (live_only) {
+  meta = meta[which((meta$status_id %in% c('vd', 'vc'))),]
+}
 
 # hi = 100
 # lo = 0
